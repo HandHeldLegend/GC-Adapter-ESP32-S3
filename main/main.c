@@ -194,6 +194,9 @@ void app_main(void)
         .configuration_descriptor = hid_configuration_descriptor,
     };
 
+
+    gamecube_reader_start();
+
     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
     ESP_LOGI(TAG, "USB initialization DONE");
 
