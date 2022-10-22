@@ -1,112 +1,170 @@
 #ifndef GC_H
 #define GC_H
-
-//#include "driver/rmt.h"
-#include <inttypes.h>
-#include <stdio.h>
-#include <string.h>
-#include "driver/gpio.h"
-#include "rom/gpio.h"
 #include "rmt_gc.h"
-#include "soc/rmt_struct.h"
-#include "hal/clk_gate_ll.h"
-#include "soc/io_mux_reg.h"
-#include "soc/gpio_periph.h"
-#include "driver/rmt.h"
-#include "driver/rmt_tx.h"
-#include "esp_log.h"
-#include "hal/rmt_ll.h"
+#include "tinyusb.h"
+#include "class/hid/hid_device.h"
+#include "freertos/semphr.h"
 
-#define JB_P1_GPIO      GPIO_NUM_6
-#define JB_P2_GPIO      GPIO_NUM_6
-#define JB_P3_GPIO      GPIO_NUM_7
-#define JB_P4_GPIO      GPIO_NUM_8
+#define GCMD_PROBE_LEN  10
+#define GCMD_ORIGIN_LEN 10
+#define GCMD_POLL_LEN   26
+#define RX_TIMEOUT_THRESH   5000
 
-#define RMT_TX_CHANNEL          0
-#define RMT_RX_CHANNEL          RMT_CHANNEL_4
+extern QueueHandle_t usb_queue;
 
-#define JB_0L_TICKS     12
-#define JB_0H_TICKS     4
-#define JB_1L_TICKS     4
-#define JB_1H_TICKS     12
-#define JB_STOP_TICKS   8
+extern rmt_item32_t gcmd_probe_rmt[GCMD_PROBE_LEN];
+extern rmt_item32_t gcmd_origin_rmt[GCMD_ORIGIN_LEN];
+extern rmt_item32_t gcmd_poll_rmt[GCMD_POLL_LEN];
 
-#define JB_IDLE_TICKS   32
+typedef enum
+{
+    CMD_PHASE_PROBE,
+    CMD_PHASE_ORIGIN,
+    CMD_PHASE_POLL
+} gc_cmd_phase_t;
 
-#define JB_LOW      (rmt_item32_t) {{{ JB_0L_TICKS,      0, JB_0H_TICKS, 1 }}}
-#define JB_HIGH     (rmt_item32_t) {{{ JB_1L_TICKS,      0, JB_1H_TICKS, 1 }}}
-#define JB_STOP     (rmt_item32_t) {{{ JB_STOP_TICKS,    0, 0,           1 }}}
+extern gc_cmd_phase_t cmd_phase;
 
-#define JB_RMT_0X0  JB_LOW, JB_LOW, JB_LOW, JB_LOW
-#define JB_RMT_0X1  JB_LOW, JB_LOW, JB_LOW, JB_HIGH 
-#define JB_RMT_0X4  JB_LOW, JB_HIGH, JB_LOW, JB_LOW
-#define JB_RMT_0X9  JB_HIGH, JB_LOW, JB_LOW, JB_HIGH
-#define JB_RMT_0X3  JB_LOW, JB_LOW, JB_HIGH, JB_HIGH
-#define JB_RMT_0X8  JB_HIGH, JB_LOW, JB_LOW, JB_LOW
-#define JB_RMT_0XF  JB_HIGH, JB_HIGH, JB_HIGH, JB_HIGH
+typedef enum
+{
+    GC_TYPE_WIRED,
+    GC_TYPE_KEYBOARD,
+    GC_TYPE_UNKNOWN
+} gc_type_t;
 
-#define JB_ZERO     (rmt_item32_t) {{{0,0,0,0}}}
+#define GC_PROBE_RESPONSE_ITEMS    
 
-// FIFO Mem Access Bit Ptr
-#define JB_RMT_FIFO     RMT.sys_conf.apb_fifo_mask
+typedef struct
+{
+    uint8_t id_upper;
+    uint8_t id_lower;
+    uint8_t junk;
+} gc_probe_response_s;
 
-// RMT Clock Select
-#define JB_RMT_CLKSEL   RMT.sys_conf.sclk_sel
+extern gc_probe_response_s gc_probe_response;
 
-// Start transmission Ptr
-// TX Channesl are CHN. RX are CHM
-#define JB_TX_BEGIN     RMT.chnconf0[RMT_TX_CHANNEL].tx_start_chn
-// Clock divider Ptr
-#define JB_TX_CLKDIV    RMT.chnconf0[RMT_TX_CHANNEL].div_cnt_chn
-// Clock Enable Ptr
-#define JB_TX_CLKEN     RMT.sys_conf.sclk_active
-// Block memory size Ptr
-#define JB_TX_MEMSIZE   RMT.chnconf0[RMT_TX_CHANNEL].mem_size_chn
-// Continuous Transmission Enable Ptr
-#define JB_TX_CONT      RMT.chnconf0[RMT_TX_CHANNEL].tx_conti_mode_chn
-// Carrier Enable Ptr
-#define JB_TX_CARRIER   RMT.chnconf0[RMT_TX_CHANNEL].carrier_en_chn
-#define JB_TX_CARRIER2   RMT.chnconf0[RMT_TX_CHANNEL].carrier_eff_en_chn
-#define JB_TX_SYNC          RMT.chnconf0[RMT_TX_CHANNEL].conf_update_chn
-// Memory owner Ptr
-//#define JB_TX_MEMOWNER  UNUSED FOR TX ON ESP32S3
-// Idle level Ptr
-#define JB_TX_IDLELVL   RMT.chnconf0[RMT_TX_CHANNEL].idle_out_lv_chn
-// Idle level enable Ptr
-#define JB_TX_IDLEEN    RMT.chnconf0[RMT_TX_CHANNEL].idle_out_en_chn
+typedef struct
+{
+    union 
+    {
+        struct
+        {
+            uint8_t button_a        : 1;
+            uint8_t button_b        : 1;
+            uint8_t button_x        : 1;
+            uint8_t button_y        : 1;
+            uint8_t button_start    : 1;
+            uint8_t b1blank         : 3;  
+        };
+        uint8_t buttons_1;
+    };
 
-// Memory RD Reset Ptr
-#define JB_TX_RDRST     RMT.chnconf0[RMT_TX_CHANNEL].mem_rd_rst_chn
-// Memory WR Reset Ptr
-#define JB_TX_WRRST     RMT.chnconf0[RMT_TX_CHANNEL].apb_mem_rst_chn
-// Memory access Ptr
-#define JB_TX_MEM           RMTMEM.chan[RMT_TX_CHANNEL].data32
+    union
+    {
+        struct
+        {
+            uint8_t button_dl       : 1;
+            uint8_t button_dr       : 1;
+            uint8_t button_dd       : 1;
+            uint8_t button_du       : 1;
+            uint8_t button_z        : 1;
+            uint8_t button_r        : 1;
+            uint8_t button_l        : 1;
+            uint8_t b2blank         : 1; 
+        };
+        uint8_t buttons_2;
+    };
 
-// Transmission complete interrupt enable Ptr
-#define JB_TX_ENAISR   RMT.int_ena.ch0_tx_end_int_ena
-// Transmission complete interrupt clear Ptr
-#define JB_TX_CLEARISR    RMT.int_clr.ch0_tx_end_int_clr
-// Transmission complete interrupt status Ptr
-#define JB_TX_STATISR    RMT.int_st.ch0_tx_end_int_st
+    uint8_t stick_x;
+    uint8_t stick_y;
+    uint8_t cstick_x;
+    uint8_t cstick_y;
+    uint8_t trigger_l;
+    uint8_t trigger_r;
+} gc_poll_response_s;
 
-// Start receive Ptr
-// TX Channesl are CHN. RX are CHM
-#define JB_RX_EN        RMT.chmconf[0].conf1.rx_en_chm
-// Clock divider Ptr
-#define JB_RX_CLKDIV    RMT.chmconf[0].conf0.div_cnt_chm
-// Block memory size Ptr
-#define JB_RX_MEMSIZE   RMT.chmconf[0].conf0.mem_size_chm
-// Memory owner Ptr
-#define JB_RX_MEMOWNER  RMT.chmconf[0].conf1.mem_owner_chm
-// Idle level Ptr
-#define JB_RX_IDLETHRESH    RMT.chmconf[0].conf0.idle_thres_chm
-// Receive complete interrupt enable Ptr
-#define JB_RX_COMPLETEISR   RMT.int_ena.ch4_rx_end_int_ena
-// Memory RD Reset Ptr
-#define JB_RX_RDRST     RMT.chmconf[0].conf1.mem_wr_rst_chm
-// Memory access Ptr
-#define JB_RX_MEM           RMTMEM.chan[4].data32
+extern gc_poll_response_s gc_poll_response;
+
+typedef struct
+{
+    bool    data_set;
+    int stick_x;
+    int stick_y;
+    int cstick_x;
+    int cstick_y;
+} gc_origin_data_s;
+
+extern gc_origin_data_s gc_origin_data;
+
+// Input structure for Nintendo Switch USB gamepad Data
+typedef struct
+{
+    union
+    {
+        struct
+        {
+            uint8_t button_y    : 1;
+            uint8_t button_b    : 1;
+            uint8_t button_a    : 1;
+            uint8_t button_x    : 1;
+            uint8_t trigger_l   : 1;
+            uint8_t trigger_r   : 1;
+            uint8_t trigger_zl  : 1;
+            uint8_t trigger_zr  : 1;
+        };
+        uint8_t buttons_1;
+    };
+
+    union
+    {
+        struct
+        {
+            uint8_t button_minus  : 1;
+            uint8_t button_plus   : 1;
+            uint8_t stick_left    : 1;
+            uint8_t stick_right   : 1;
+            uint8_t button_home   : 1;
+            uint8_t button_capture: 1;
+            uint8_t dummy_1       : 2;
+        }; 
+        uint8_t buttons_2;
+    };
+
+  uint8_t dpad_hat;
+  uint8_t stick_left_x;
+  uint8_t stick_left_y;
+  uint8_t stick_right_x;
+  uint8_t stick_right_y;
+  uint8_t dummy_2;
+
+} ns_input_s;
+
+extern ns_input_s ns_input;
+
+typedef enum
+{
+  HAT_TOP          = 0x00,
+  HAT_TOP_RIGHT    = 0x01,
+  HAT_RIGHT        = 0x02,
+  HAT_BOTTOM_RIGHT = 0x03,
+  HAT_BOTTOM       = 0x04,
+  HAT_BOTTOM_LEFT  = 0x05,
+  HAT_LEFT         = 0x06,
+  HAT_TOP_LEFT     = 0x07,
+  HAT_CENTER       = 0x08,
+} input_hat_dir_t;
+
+typedef struct
+{
+    uint8_t phase;
+} xmessage_s;
+
+extern uint8_t usb_buffer[8];
+extern volatile uint32_t rx_timeout;
+extern volatile bool rx_recieved; 
 
 esp_err_t gamecube_reader_start();
+
+void gamecube_send_usb(void);
 
 #endif

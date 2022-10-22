@@ -8,13 +8,15 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "tinyusb.h"
-#include "class/hid/hid_device.h"
 #include "driver/gpio.h"
 #include "gc.h"
+#include "rmt_gc.h"
 
 #define APP_BUTTON (GPIO_NUM_0) // Use BOOT signal by default
-static const char *TAG = "example";
+static const char *TAG = "Mitch GC Pro Adapter";
+
+TaskHandle_t usb_task_handle = NULL;
+QueueHandle_t usb_queue = NULL;
 
 /************* TinyUSB descriptors ****************/
 
@@ -121,61 +123,171 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_
 }
 
 /********* Application ***************/
-
-// Input structure for Nintendo Switch USB gamepad Data
-typedef struct
+void usb_send_task(void *parameters) 
 {
-    union
+
+    while(1)
     {
-        struct
+        vTaskDelay(0.15/portTICK_PERIOD_MS);
+        if (rx_recieved)
         {
-            uint8_t button_y    : 1;
-            uint8_t button_b    : 1;
-            uint8_t button_a    : 1;
-            uint8_t button_x    : 1;
-            uint8_t trigger_l   : 1;
-            uint8_t trigger_r   : 1;
-            uint8_t trigger_zl  : 1;
-            uint8_t trigger_zr  : 1;
-        };
-        uint8_t buttons_1;
-    };
+            rx_recieved = false;
+            switch(cmd_phase)
+            {
+                default:
+                case CMD_PHASE_PROBE:
+                    
+                    // Clear our probe response
+                    memset(&gc_probe_response, 0, sizeof(gc_probe_response_s));
 
-    union
-    {
-        struct
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_probe_response.id_upper |= ((JB_RX_MEM[i].duration0 < JB_RX_MEM[i].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_probe_response.id_lower |= ((JB_RX_MEM[i+8].duration0 < JB_RX_MEM[i+8].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_probe_response.junk |= ((JB_RX_MEM[i+16].duration0 < JB_RX_MEM[i+16].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    ESP_LOGI("CMD", "PROBE GOT: %X", (unsigned int) gc_probe_response.id_upper);
+                    if (gc_probe_response.id_upper == 0x9)
+                    {
+                        cmd_phase = CMD_PHASE_ORIGIN;
+                        memcpy(JB_TX_MEM, gcmd_origin_rmt, sizeof(rmt_item32_t) * GCMD_ORIGIN_LEN);
+                    }
+
+                    // Set the memory owner back appropriately.
+                    JB_RX_MEMOWNER  = 1;
+
+                    // Reset RX memory pointer
+                    JB_RX_RDRST     = 1;
+                    JB_RX_RDRST     = 0;
+
+                    // Set RX to begin so it starts when sync bit is set.
+                    JB_RX_BEGIN     = 1;
+                    // Start next transaction.
+                    JB_TX_BEGIN     = 1;
+                    break;
+
+                case CMD_PHASE_ORIGIN:
+                    
+                case CMD_PHASE_POLL:
+                    memset(&gc_poll_response, 0, sizeof(gc_poll_response_s));
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.buttons_1 |= ((JB_RX_MEM[i].duration0 < JB_RX_MEM[i].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.buttons_2 |= ((JB_RX_MEM[i+8].duration0 < JB_RX_MEM[i+8].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.stick_x |= ((JB_RX_MEM[i+16].duration0 < JB_RX_MEM[i+16].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.stick_y |= ((JB_RX_MEM[i+24].duration0 < JB_RX_MEM[i+24].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.cstick_x |= ((JB_RX_MEM[i+32].duration0 < JB_RX_MEM[i+32].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.cstick_y |= ((JB_RX_MEM[i+40].duration0 < JB_RX_MEM[i+40].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.trigger_l |= ((JB_RX_MEM2[i].duration0 < JB_RX_MEM2[i].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.trigger_r |= ((JB_RX_MEM2[i+8].duration0 < JB_RX_MEM2[i+8].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    if (cmd_phase == CMD_PHASE_ORIGIN)
+                    {
+                            //ESP_LOGI("CMD", "ORIGIN GOT");
+                            gc_origin_data.data_set = true;
+
+                            gc_origin_data.stick_x  = 128 - (int) gc_poll_response.stick_x;
+                            gc_origin_data.stick_y  = 128 - (int) gc_poll_response.stick_y;
+                            gc_origin_data.cstick_x = 128 - (int) gc_poll_response.cstick_x;
+                            gc_origin_data.cstick_y = 128 - (int) gc_poll_response.cstick_y;
+
+                            memcpy(JB_TX_MEM, gcmd_poll_rmt, sizeof(rmt_item32_t) * GCMD_POLL_LEN);
+
+                            cmd_phase = CMD_PHASE_POLL;
+                            JB_RX_MEMOWNER  = 1;
+                            JB_RX_BEGIN     = 1;
+                            JB_TX_BEGIN     = 1;
+                    }
+                    else
+                    {
+                        //ESP_LOGI("CMD", "POLL GOT");
+                        // Handle USB update
+                        gamecube_send_usb();
+                        tud_hid_report(0, &usb_buffer, 8);
+                        vTaskDelay(0.5/portTICK_PERIOD_MS);
+                        JB_RX_MEMOWNER  = 1;
+                        JB_RX_BEGIN     = 1;
+                        JB_TX_BEGIN     = 1;
+                    }
+
+                    break;
+            }
+            
+        }
+        else
         {
-            uint8_t button_minus  : 1;
-            uint8_t button_plus   : 1;
-            uint8_t stick_left    : 1;
-            uint8_t stick_right   : 1;
-            uint8_t button_home   : 1;
-            uint8_t button_capture: 1;
-            uint8_t dummy_1       : 2;
-        }; 
-        uint8_t buttons_2;
-    };
+            rx_timeout+=1;
+            if (rx_timeout > 1000)
+            {
+                ESP_LOGI("TIMEOUT", "RX TIMEOUT");
 
-  uint8_t dpad_hat;
-  uint8_t stick_left_x;
-  uint8_t stick_left_y;
-  uint8_t stick_right_x;
-  uint8_t stick_right_y;
-  uint8_t dummy_2;
+                memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
+                cmd_phase = CMD_PHASE_PROBE;
 
-} ns_input_s;
-
-static void app_send_hid_demo(void)
-{
-    ns_input_s input = {};
-    input.button_a = !gpio_get_level(APP_BUTTON);
-    uint8_t buffer[8] = {0};
-    memcpy(&buffer, &input, sizeof(buffer));
-    tud_hid_report(0, &buffer, 8);
+                JB_RX_MEMOWNER  = 1;
+                JB_RX_BEGIN     = 0;
+                JB_RX_SYNC      = 1;
+                
+                JB_RX_BEGIN     = 1;
+                JB_TX_BEGIN     = 1;
+            }
+            
+        }
+    
+    }
 }
 
 void app_main(void)
 {
+    ESP_LOGI(TAG, "USB initialization");
+    const tinyusb_config_t tusb_cfg = {
+        .device_descriptor = NULL,
+        .string_descriptor = NULL,
+        .external_phy = false,
+        .configuration_descriptor = hid_configuration_descriptor,
+    };
+
+    ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
+
     // Initialize button that will trigger HID reports
     const gpio_config_t boot_button_config = {
         .pin_bit_mask = BIT64(APP_BUTTON),
@@ -186,25 +298,7 @@ void app_main(void)
     };
     ESP_ERROR_CHECK(gpio_config(&boot_button_config));
 
-    ESP_LOGI(TAG, "USB initialization");
-    const tinyusb_config_t tusb_cfg = {
-        .device_descriptor = NULL,
-        .string_descriptor = NULL,
-        .external_phy = false,
-        .configuration_descriptor = hid_configuration_descriptor,
-    };
-
-
     gamecube_reader_start();
 
-    ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
-    ESP_LOGI(TAG, "USB initialization DONE");
-
-    while (1) {
-        if (tud_mounted()) {
-            static bool send_hid_data = true;
-            app_send_hid_demo();
-        }
-        vTaskDelay(1/portTICK_PERIOD_MS);
-    }
+    xTaskCreatePinnedToCore(usb_send_task, "usb_task", 4048, NULL, 0, &usb_task_handle, 1);
 }
