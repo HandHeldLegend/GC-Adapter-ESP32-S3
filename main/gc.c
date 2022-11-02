@@ -6,14 +6,11 @@ rmt_item32_t gcmd_probe_rmt[GCMD_PROBE_LEN] = {
         JB_STOP, JB_ZERO
     };
 
-
 // Origin Command
 rmt_item32_t gcmd_origin_rmt[GCMD_ORIGIN_LEN] = {
         JB_RMT_0X4, JB_RMT_0X1,
         JB_STOP, JB_ZERO
     };
-
-
 
 // Poll Command
 rmt_item32_t gcmd_poll_rmt[GCMD_POLL_LEN] = {
@@ -23,16 +20,15 @@ rmt_item32_t gcmd_poll_rmt[GCMD_POLL_LEN] = {
         JB_STOP, JB_ZERO
     };
 
-
+// Declare variables as empty
 gc_cmd_phase_t         cmd_phase           = CMD_PHASE_PROBE;
 gc_probe_response_s    gc_probe_response   = {0};
 gc_poll_response_s     gc_poll_response    = {0};
 gc_origin_data_s       gc_origin_data      = {0};
-ns_input_s             ns_input            = {0};
 
-uint8_t usb_buffer[8] = {0};
-volatile uint32_t rx_timeout = 0;
-volatile bool rx_recieved   = false;
+volatile uint32_t   rx_timeout  = 0;
+volatile bool       rx_recieved     = false;
+volatile uint32_t   rx_offset       = 0;
 
 static void gamecube_rmt_isr(void* arg) 
 {
@@ -49,91 +45,17 @@ static void gamecube_rmt_isr(void* arg)
     }
     else if (JB_RX_STATISR)
     {
-        rx_timeout = 0;
+        rx_offset       = RMT.chmstatus[0].mem_waddr_ex_chm - GC_MEM_OFFSET;
+        rx_timeout      = 0;
         JB_RX_MEMOWNER  = 0;
-        JB_RX_BEGIN     = 0;
         JB_RX_RDRST     = 1;
         JB_RX_RDRST     = 0;
+        JB_RX_BEGIN     = 0;
         JB_RX_SYNC      = 1;
-
         JB_RX_CLEARISR  = 1;
 
         rx_recieved = true;
     }
-}
-
-uint8_t dir_to_hat(uint8_t leftRight, uint8_t upDown)
-{
-    uint8_t ret = HAT_CENTER;
-
-    if (leftRight == 2)
-    {
-        ret = HAT_RIGHT;
-        if (upDown == 2)
-        {
-            ret = HAT_TOP_RIGHT;
-        }
-        else if (upDown == 0)
-        {
-            ret = HAT_BOTTOM_RIGHT;
-        }
-    }
-    else if (leftRight == 0)
-    {
-        ret = HAT_LEFT;
-        if (upDown == 2)
-        {
-            ret = HAT_TOP_LEFT;
-        }
-        else if (upDown == 0)
-        {
-            ret = HAT_BOTTOM_LEFT;
-        }
-    }
-
-    else if (upDown == 2)
-    {
-        ret = HAT_TOP;
-    }
-    else if (upDown == 0)
-    {
-        ret = HAT_BOTTOM;
-    }
-
-    return ret;
-}
-
-void gamecube_send_usb(void)
-{
-    // Generate the USB Data
-    ns_input.button_a = gc_poll_response.button_a;
-    ns_input.button_b = gc_poll_response.button_b;
-    ns_input.button_x = gc_poll_response.button_x;
-    ns_input.button_y = gc_poll_response.button_y;
-
-    uint8_t lr = 1 - gc_poll_response.button_dl + gc_poll_response.button_dr;
-    uint8_t ud = 1 - gc_poll_response.button_dd + gc_poll_response.button_du;
-
-    ns_input.dpad_hat = dir_to_hat(lr, ud);
-
-    ns_input.button_plus = gc_poll_response.button_start;
-
-    ns_input.trigger_r = gc_poll_response.button_z;
-
-    ns_input.trigger_zl = gc_poll_response.button_l;
-    ns_input.trigger_zr = gc_poll_response.button_r;
-    
-    int adj_x   = (int) gc_poll_response.stick_x + gc_origin_data.stick_x;
-    int adj_y   = 256 - (int) gc_poll_response.stick_y + gc_origin_data.stick_y;
-    int adj_cx  = (int) gc_poll_response.cstick_x + gc_origin_data.cstick_x;
-    int adj_cy  = (int) gc_poll_response.cstick_y + gc_origin_data.cstick_y;
-
-    ns_input.stick_left_x   = (uint8_t) adj_x;
-    ns_input.stick_left_y   = (uint8_t) adj_y;
-    ns_input.stick_right_x  = (uint8_t) adj_cx;
-    ns_input.stick_right_y  = (uint8_t) adj_cy;
-
-    memcpy(&usb_buffer, &ns_input, sizeof(usb_buffer));
 }
 
 esp_err_t gamecube_reader_start()
@@ -141,7 +63,6 @@ esp_err_t gamecube_reader_start()
     const char* TAG = "gamecube_init";
 
     periph_ll_enable_clk_clear_rst(PERIPH_RMT_MODULE);
-    
 
     // RMT Peripheral System Config
     JB_RMT_FIFO     = 1;
@@ -189,6 +110,9 @@ esp_err_t gamecube_reader_start()
     }
 
     cmd_phase = CMD_PHASE_PROBE;
+
+    rx_offset       = RMT.chmstatus[0].mem_waddr_ex_chm;
+    ESP_LOGI("SETUPPHASE", "Offset: %X", (unsigned int) rx_offset);
 
     rmt_isr_register(gamecube_rmt_isr, NULL, 3, NULL);
 

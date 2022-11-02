@@ -1,16 +1,18 @@
 #ifndef GC_H
 #define GC_H
-#include "rmt_gc.h"
-#include "tinyusb.h"
-#include "class/hid/hid_device.h"
-#include "freertos/semphr.h"
+
+#include "adapter_includes.h"
+#include "driver/rmt_types_legacy.h"
 
 #define GCMD_PROBE_LEN  10
 #define GCMD_ORIGIN_LEN 10
 #define GCMD_POLL_LEN   26
 #define RX_TIMEOUT_THRESH   5000
 
-extern QueueHandle_t usb_queue;
+#define GC_PROBE_RESPONSE_LEN   25
+#define GC_ORIGIN_RESPONSE_LEN  81
+#define GC_POLL_RESPONSE_LEN    65
+#define GC_MEM_OFFSET           0xC0
 
 extern rmt_item32_t gcmd_probe_rmt[GCMD_PROBE_LEN];
 extern rmt_item32_t gcmd_origin_rmt[GCMD_ORIGIN_LEN];
@@ -30,9 +32,7 @@ typedef enum
     GC_TYPE_WIRED,
     GC_TYPE_KEYBOARD,
     GC_TYPE_UNKNOWN
-} gc_type_t;
-
-#define GC_PROBE_RESPONSE_ITEMS    
+} gc_type_t;  
 
 typedef struct
 {
@@ -41,7 +41,7 @@ typedef struct
     uint8_t junk;
 } gc_probe_response_s;
 
-extern gc_probe_response_s gc_probe_response;
+extern gc_probe_response_s  gc_probe_response;
 
 typedef struct
 {
@@ -83,85 +83,23 @@ typedef struct
     uint8_t trigger_r;
 } gc_poll_response_s;
 
-extern gc_poll_response_s gc_poll_response;
+extern gc_poll_response_s   gc_poll_response;
 
 typedef struct
 {
     bool    data_set;
-    int stick_x;
-    int stick_y;
-    int cstick_x;
-    int cstick_y;
+    int     stick_x;
+    int     stick_y;
+    int     cstick_x;
+    int     cstick_y;
 } gc_origin_data_s;
 
-extern gc_origin_data_s gc_origin_data;
+extern volatile uint32_t    rx_timeout;
+extern volatile bool        rx_recieved;
+extern volatile uint32_t    rx_offset;
 
-// Input structure for Nintendo Switch USB gamepad Data
-typedef struct
-{
-    union
-    {
-        struct
-        {
-            uint8_t button_y    : 1;
-            uint8_t button_b    : 1;
-            uint8_t button_a    : 1;
-            uint8_t button_x    : 1;
-            uint8_t trigger_l   : 1;
-            uint8_t trigger_r   : 1;
-            uint8_t trigger_zl  : 1;
-            uint8_t trigger_zr  : 1;
-        };
-        uint8_t buttons_1;
-    };
-
-    union
-    {
-        struct
-        {
-            uint8_t button_minus  : 1;
-            uint8_t button_plus   : 1;
-            uint8_t stick_left    : 1;
-            uint8_t stick_right   : 1;
-            uint8_t button_home   : 1;
-            uint8_t button_capture: 1;
-            uint8_t dummy_1       : 2;
-        }; 
-        uint8_t buttons_2;
-    };
-
-  uint8_t dpad_hat;
-  uint8_t stick_left_x;
-  uint8_t stick_left_y;
-  uint8_t stick_right_x;
-  uint8_t stick_right_y;
-  uint8_t dummy_2;
-
-} ns_input_s;
-
-extern ns_input_s ns_input;
-
-typedef enum
-{
-  HAT_TOP          = 0x00,
-  HAT_TOP_RIGHT    = 0x01,
-  HAT_RIGHT        = 0x02,
-  HAT_BOTTOM_RIGHT = 0x03,
-  HAT_BOTTOM       = 0x04,
-  HAT_BOTTOM_LEFT  = 0x05,
-  HAT_LEFT         = 0x06,
-  HAT_TOP_LEFT     = 0x07,
-  HAT_CENTER       = 0x08,
-} input_hat_dir_t;
-
-typedef struct
-{
-    uint8_t phase;
-} xmessage_s;
-
-extern uint8_t usb_buffer[8];
-extern volatile uint32_t rx_timeout;
-extern volatile bool rx_recieved; 
+// Hold the origin data for a session
+extern gc_origin_data_s     gc_origin_data;
 
 esp_err_t gamecube_reader_start();
 
