@@ -74,6 +74,34 @@ uint8_t dir_to_hat(uint8_t leftRight, uint8_t upDown)
     return ret;
 }
 
+#define ANALOG_SCALER (float) 1.28
+uint8_t scale_axis(int input)
+{
+    int res = input;
+    if (input > 130)
+    {
+        float tmp = (float) input - 128;
+        tmp = tmp * ANALOG_SCALER;
+        res = (int) tmp + 128;
+    }
+    else if (input < 126)
+    {
+        float tmp = 128 - (float) input;
+        tmp = tmp * ANALOG_SCALER;
+        res = 128 - (int) tmp;    
+    }
+    
+    if (res > 255)
+    {
+        res = 255;
+    }
+    if (res < 0)
+    {
+        res = 0;
+    }
+    return (uint8_t) res;
+}
+
 esp_err_t gcusb_start(usb_mode_t mode)
 {
     const char* TAG = "gcusb_start";
@@ -147,10 +175,10 @@ void gcusb_send_data()
             int adj_cx  = (int) gc_poll_response.cstick_x + gc_origin_data.cstick_x;
             int adj_cy  = (int) gc_poll_response.cstick_y + gc_origin_data.cstick_y;
 
-            ns_input.stick_left_x   = (uint8_t) adj_x;
-            ns_input.stick_left_y   = (uint8_t) adj_y;
-            ns_input.stick_right_x  = (uint8_t) adj_cx;
-            ns_input.stick_right_y  = (uint8_t) adj_cy;
+            ns_input.stick_left_x   = scale_axis(adj_x);
+            ns_input.stick_left_y   = scale_axis(adj_y);
+            ns_input.stick_right_x  = scale_axis(adj_cx);
+            ns_input.stick_right_y  = scale_axis(adj_cy);
 
             memcpy(&ns_buffer, &ns_input, NS_HID_LEN);
 
