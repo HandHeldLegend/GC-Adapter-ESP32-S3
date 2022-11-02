@@ -221,8 +221,6 @@ void main_gamecube_task(void *parameters)
             rx_timeout+=1;
             if (rx_timeout > 1000)
             {
-                //ESP_LOGI("TIMEOUT", "RX TIMEOUT");
-
                 memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
                 cmd_phase = CMD_PHASE_PROBE;
 
