@@ -106,8 +106,6 @@ void rgb_create_packet(uint8_t *buffer)
 
     memcpy(adjusted_colors, current_colors, sizeof(rgb_s) * GC_LED_COUNT);
 
-    ESP_LOGI("ADJ COLOR", "%X", (unsigned int) adjusted_colors[0].rgb);
-
     float ratio = (float) util_rgb_brightness / 255.0;
     for (uint8_t s = 0; s < GC_LED_COUNT; s++)
     {
@@ -118,7 +116,6 @@ void rgb_create_packet(uint8_t *buffer)
         adjusted_colors[s].green = (uint8_t) newGreen;
         adjusted_colors[s].blue = (uint8_t) newBlue;
     }
-    ESP_LOGI("ADJ COLOR", "%X", (unsigned int) adjusted_colors[0].rgb);
 
     // Set up a splitter
     rgb_splitter_s s_red    = {0};
@@ -191,11 +188,6 @@ void rgb_create_packet(uint8_t *buffer)
             s_idx   += 3;
         }
 
-        ESP_LOGI("Green splitter:", "%X", (unsigned int) s_green.splitter);
-        ESP_LOGI("Green Byte 0:", "%X", (unsigned int) s_green.byte0);
-        ESP_LOGI("Green Byte 1:", "%X", (unsigned int) s_green.byte1);
-        ESP_LOGI("Green Byte 2:", "%X", (unsigned int) s_green.byte2);
-
         // On ESP32-S3 we have to invert the byte : )
         #if CONFIG_IDF_TARGET_ESP32S3
             // Once we've processed all 8 bits of the three colors, copy to our SPI buffer
@@ -256,12 +248,7 @@ void rgb_show()
     }
 
     uint8_t rgb_spi_buffer[GC_LED_COUNT*RGB_BYTE_MULTIPLIER];
-    rgb_create_packet(&rgb_spi_buffer);
-
-    for(uint8_t i = 0; i < GC_LED_COUNT*RGB_BYTE_MULTIPLIER; i++)
-    {
-        ESP_LOGI("COLOR", ": %X", (unsigned int) rgb_spi_buffer[i]);
-    }
+    rgb_create_packet(rgb_spi_buffer);
 
     spi_transaction_t trans = {
         .length = GC_LED_COUNT*RGB_BYTE_MULTIPLIER*8,

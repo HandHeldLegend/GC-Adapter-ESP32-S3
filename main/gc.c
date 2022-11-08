@@ -21,7 +21,11 @@ rmt_item32_t gcmd_poll_rmt[GCMD_POLL_LEN] = {
     };
 
 // Declare variables as empty
-gc_cmd_phase_t         cmd_phase           = CMD_PHASE_PROBE;
+#if ADAPTER_DEBUG_ENABLE
+    gc_cmd_phase_t         cmd_phase           = CMD_PHASE_DEBUG;
+#else
+    gc_cmd_phase_t         cmd_phase           = CMD_PHASE_PROBE;
+#endif
 gc_probe_response_s    gc_probe_response   = {0};
 gc_poll_response_s     gc_poll_response    = {0};
 gc_origin_data_s       gc_origin_data      = {0};
@@ -29,6 +33,7 @@ gc_origin_data_s       gc_origin_data      = {0};
 volatile uint32_t   rx_timeout  = 0;
 volatile bool       rx_recieved     = false;
 volatile uint32_t   rx_offset       = 0;
+volatile gc_vibrate_t rx_vibrate    = VIBRATE_OFF;
 
 static void gamecube_rmt_isr(void* arg) 
 {
@@ -54,6 +59,7 @@ static void gamecube_rmt_isr(void* arg)
         JB_RX_SYNC      = 1;
         JB_RX_CLEARISR  = 1;
 
+        JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (rx_vibrate == VIBRATE_ON) ? JB_HIGH : JB_LOW;
         rx_recieved = true;
     }
 }
@@ -103,11 +109,6 @@ esp_err_t gamecube_reader_start()
     gpio_matrix_in(JB_P1_GPIO, RMT_SIG_IN0_IDX, 0);
 
     memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
-
-    for (int i = 0; i < 8; i++)
-    {
-        ESP_LOGI("TEST: ", "%X", (unsigned int) JB_TX_MEM[i].val);
-    }
 
     cmd_phase = CMD_PHASE_PROBE;
 

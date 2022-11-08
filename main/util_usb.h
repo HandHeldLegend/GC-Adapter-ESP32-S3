@@ -3,6 +3,8 @@
 
 #include "adapter_includes.h"
 
+#define CFG_TUD_VENDOR          1
+
 typedef enum
 {
     USB_MODE_NS,

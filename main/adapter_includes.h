@@ -1,6 +1,8 @@
 #ifndef ADAPTER_INCLUDES_H
 #define ADAPTER_INCLUDES_H
 
+#define ADAPTER_DEBUG_ENABLE 0
+
 // Generics
 #include <stdlib.h>
 #include <inttypes.h>
@@ -15,6 +17,7 @@
 #include "esp_pm.h"
 #include "esp_attr.h"
 #include "esp_private/gdma.h"
+#include "esp_check.h"
 
 // USB
 #include "tinyusb.h"

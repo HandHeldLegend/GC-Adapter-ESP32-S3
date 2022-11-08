@@ -43,6 +43,8 @@ typedef struct
     
 } rgb_s;
 
+extern rgb_s led_colors[];
+
 // We use this type to set the bits
 // appropriately for the SPI output.
 // Easier to work with one 32 bit int

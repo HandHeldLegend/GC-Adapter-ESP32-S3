@@ -14,6 +14,9 @@
 #define GC_POLL_RESPONSE_LEN    65
 #define GC_MEM_OFFSET           0xC0
 
+// The index of the RMT memory where the outgoing vibrate bit is set
+#define GC_POLL_VIBRATE_IDX    23  
+
 extern rmt_item32_t gcmd_probe_rmt[GCMD_PROBE_LEN];
 extern rmt_item32_t gcmd_origin_rmt[GCMD_ORIGIN_LEN];
 extern rmt_item32_t gcmd_poll_rmt[GCMD_POLL_LEN];
@@ -22,7 +25,8 @@ typedef enum
 {
     CMD_PHASE_PROBE,
     CMD_PHASE_ORIGIN,
-    CMD_PHASE_POLL
+    CMD_PHASE_POLL,
+    CMD_PHASE_DEBUG,
 } gc_cmd_phase_t;
 
 extern gc_cmd_phase_t cmd_phase;
@@ -94,9 +98,17 @@ typedef struct
     int     cstick_y;
 } gc_origin_data_s;
 
+typedef enum 
+{
+    VIBRATE_OFF,
+    VIBRATE_ON,
+    VIBRATE_BRAKE,
+} gc_vibrate_t;
+
 extern volatile uint32_t    rx_timeout;
 extern volatile bool        rx_recieved;
 extern volatile uint32_t    rx_offset;
+extern volatile gc_vibrate_t rx_vibrate;
 
 // Hold the origin data for a session
 extern gc_origin_data_s     gc_origin_data;

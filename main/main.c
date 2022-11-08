@@ -5,30 +5,32 @@
  */
 
 #include "adapter_includes.h"
+#include "descriptors.h"
 
 #define APP_BUTTON (GPIO_NUM_0) // Use BOOT signal by default
 static const char *TAG = "Mitch GC Pro Adapter";
 
+rgb_s led_colors[GC_LED_COUNT] = {COLOR_RED};
 TaskHandle_t usb_task_handle = NULL;
-rgb_s colors[GC_LED_COUNT] = {COLOR_RED};
-
-// Invoked when received GET_REPORT control request
-// Application must fill buffer report's content and return its length.
-// Return zero will cause the stack to STALL request
-uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t* buffer, uint16_t reqlen)
-{
-  (void) instance;
-  (void) report_id;
-  (void) report_type;
-  (void) buffer;
-  (void) reqlen;
-
-  return 0;
-}
+#if ADAPTER_DEBUG_ENABLE
+TaskHandle_t debug_task_handle = NULL;
+#endif
 
 uint8_t hue = 0;
 uint8_t sat = 255;
 uint8_t val = 255;
+
+void debug_task(void *parameters)
+{
+    ESP_LOGI("DEBUG:", "Starting Debug Task Loop");
+    cmd_phase = CMD_PHASE_DEBUG;
+    while(1)
+    {
+        // Simulate controller connected every 1 ms
+        rx_recieved = 1;
+        vTaskDelay(8/portTICK_PERIOD_MS);
+    }
+}
 
 /********* Application ***************/
 void main_gamecube_task(void *parameters) 
@@ -37,10 +39,7 @@ void main_gamecube_task(void *parameters)
     while(1)
     {
         // We delay to give task time for other things :)
-        vTaskDelay(0.15/portTICK_PERIOD_MS);
-        //rgb_setall(rgb_from_hsv(hue, sat, val), colors);
-        //rgb_show();
-        //hue+=1;
+        vTaskDelay(0.05/portTICK_PERIOD_MS);
 
         // If we got a reply from a GameCube Controller, process it.
         if (rx_recieved)
@@ -51,6 +50,15 @@ void main_gamecube_task(void *parameters)
             // Check which part of the cmd_phase we are in.
             switch(cmd_phase)
             {
+                case CMD_PHASE_DEBUG:
+                    uint8_t b = !gpio_get_level(APP_BUTTON);
+                    gc_poll_response.button_z = b;
+                    gc_poll_response.button_a = b;
+                    if (adapter_status == GCSTATUS_WORKING)
+                    {
+                        gcusb_send_data();
+                    }
+                    break;
                 default:
                 case CMD_PHASE_PROBE:
                     if (rx_offset != GC_PROBE_RESPONSE_LEN)
@@ -99,10 +107,25 @@ void main_gamecube_task(void *parameters)
                     }
                     else
                     {
-                        ESP_LOGI("ORIGINPHASE", "Got Origin Response OK.");
-                        memset(&gc_poll_response, 0, sizeof(gc_poll_response_s));
 
-                        for (uint8_t i = 0; i < 8; i++)
+                        memset(&gc_poll_response, 0, 3);
+
+                        for (uint8_t i = 0; i < 3; i++)
+                        {
+                            gc_poll_response.buttons_1 |= ((JB_RX_MEM[i].duration0 < JB_RX_MEM[i].duration1) ? 1 : 0) << (7-i);
+                        }
+
+                        // Toss out junk data
+                        if (gc_poll_response.b1blank != 0x00)
+                        {
+                            break;
+                        }
+
+                        memset(&gc_poll_response, 0, sizeof(gc_poll_response));
+
+                        ESP_LOGI("ORIGINPHASE", "Got Origin Response OK.");
+
+                        for (uint8_t i = 3; i < 8; i++)
                         {
                             gc_poll_response.buttons_1 |= ((JB_RX_MEM[i].duration0 < JB_RX_MEM[i].duration1) ? 1 : 0) << (7-i);
                         }
@@ -151,6 +174,9 @@ void main_gamecube_task(void *parameters)
 
                         memcpy(JB_TX_MEM, gcmd_poll_rmt, sizeof(rmt_item32_t) * GCMD_POLL_LEN);
 
+                        rgb_setall(COLOR_GREEN, led_colors);
+                        rgb_show();
+
                         cmd_phase = CMD_PHASE_POLL;
                     }
                     JB_RX_MEMOWNER  = 1;
@@ -164,51 +190,66 @@ void main_gamecube_task(void *parameters)
                     }
                     else
                     {
-                        memset(&gc_poll_response, 0, sizeof(gc_poll_response_s));
+                        memset(&gc_poll_response, 0, 3);
 
-                        for (uint8_t i = 0; i < 8; i++)
+                        for (uint8_t i = 0; i < 3; i++)
                         {
                             gc_poll_response.buttons_1 |= ((JB_RX_MEM[i].duration0 < JB_RX_MEM[i].duration1) ? 1 : 0) << (7-i);
                         }
 
-                        for (uint8_t i = 0; i < 8; i++)
+                        // Toss out junk data
+                        if (!gc_poll_response.b1blank)
                         {
-                            gc_poll_response.buttons_2 |= ((JB_RX_MEM[i+8].duration0 < JB_RX_MEM[i+8].duration1) ? 1 : 0) << (7-i);
+                            memset(&gc_poll_response, 0, sizeof(gc_poll_response));
+
+                            for (uint8_t i = 3; i < 8; i++)
+                            {
+                                gc_poll_response.buttons_1 |= ((JB_RX_MEM[i].duration0 < JB_RX_MEM[i].duration1) ? 1 : 0) << (7-i);
+                            }
+
+                            for (uint8_t i = 0; i < 8; i++)
+                            {
+                                gc_poll_response.buttons_2 |= ((JB_RX_MEM[i+8].duration0 < JB_RX_MEM[i+8].duration1) ? 1 : 0) << (7-i);
+                            }
+
+                            for (uint8_t i = 0; i < 8; i++)
+                            {
+                                gc_poll_response.stick_x |= ((JB_RX_MEM[i+16].duration0 < JB_RX_MEM[i+16].duration1) ? 1 : 0) << (7-i);
+                            }
+
+                            for (uint8_t i = 0; i < 8; i++)
+                            {
+                                gc_poll_response.stick_y |= ((JB_RX_MEM[i+24].duration0 < JB_RX_MEM[i+24].duration1) ? 1 : 0) << (7-i);
+                            }
+
+                            for (uint8_t i = 0; i < 8; i++)
+                            {
+                                gc_poll_response.cstick_x |= ((JB_RX_MEM[i+32].duration0 < JB_RX_MEM[i+32].duration1) ? 1 : 0) << (7-i);
+                            }
+
+                            for (uint8_t i = 0; i < 8; i++)
+                            {
+                                gc_poll_response.cstick_y |= ((JB_RX_MEM[i+40].duration0 < JB_RX_MEM[i+40].duration1) ? 1 : 0) << (7-i);
+                            }
+
+                            for (uint8_t i = 0; i < 8; i++)
+                            {
+                                gc_poll_response.trigger_l |= ((JB_RX_MEM2[i].duration0 < JB_RX_MEM2[i].duration1) ? 1 : 0) << (7-i);
+                            }
+
+                            for (uint8_t i = 0; i < 8; i++)
+                            {
+                                gc_poll_response.trigger_r |= ((JB_RX_MEM2[i+8].duration0 < JB_RX_MEM2[i+8].duration1) ? 1 : 0) << (7-i);
+                            }
+
                         }
 
-                        for (uint8_t i = 0; i < 8; i++)
+                        if (adapter_status == GCSTATUS_WORKING)
                         {
-                            gc_poll_response.stick_x |= ((JB_RX_MEM[i+16].duration0 < JB_RX_MEM[i+16].duration1) ? 1 : 0) << (7-i);
+                            gcusb_send_data();
                         }
-
-                        for (uint8_t i = 0; i < 8; i++)
-                        {
-                            gc_poll_response.stick_y |= ((JB_RX_MEM[i+24].duration0 < JB_RX_MEM[i+24].duration1) ? 1 : 0) << (7-i);
-                        }
-
-                        for (uint8_t i = 0; i < 8; i++)
-                        {
-                            gc_poll_response.cstick_x |= ((JB_RX_MEM[i+32].duration0 < JB_RX_MEM[i+32].duration1) ? 1 : 0) << (7-i);
-                        }
-
-                        for (uint8_t i = 0; i < 8; i++)
-                        {
-                            gc_poll_response.cstick_y |= ((JB_RX_MEM[i+40].duration0 < JB_RX_MEM[i+40].duration1) ? 1 : 0) << (7-i);
-                        }
-
-                        for (uint8_t i = 0; i < 8; i++)
-                        {
-                            gc_poll_response.trigger_l |= ((JB_RX_MEM2[i].duration0 < JB_RX_MEM2[i].duration1) ? 1 : 0) << (7-i);
-                        }
-
-                        for (uint8_t i = 0; i < 8; i++)
-                        {
-                            gc_poll_response.trigger_r |= ((JB_RX_MEM2[i+8].duration0 < JB_RX_MEM2[i+8].duration1) ? 1 : 0) << (7-i);
-                        }
-                        //gcusb_send_data()
-                        
-                        //vTaskDelay(0.1/portTICK_PERIOD_MS);
                     }
+
                     JB_RX_MEMOWNER  = 1;
                     JB_RX_BEGIN     = 1;
                     JB_TX_BEGIN     = 1;
@@ -221,8 +262,14 @@ void main_gamecube_task(void *parameters)
             rx_timeout+=1;
             if (rx_timeout > 1000)
             {
+                rgb_setall(COLOR_YELLOW, led_colors);
+                rgb_show();
                 memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
+                #if ADAPTER_DEBUG_ENABLE
+                cmd_phase = CMD_PHASE_DEBUG;
+                #else
                 cmd_phase = CMD_PHASE_PROBE;
+                #endif
 
                 JB_RX_MEMOWNER  = 1;
                 JB_RX_BEGIN     = 0;
@@ -240,8 +287,6 @@ void main_gamecube_task(void *parameters)
 void app_main(void)
 {
 
-    //ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
-
     // Initialize button that will trigger HID reports
     const gpio_config_t boot_button_config = {
         .pin_bit_mask = BIT64(APP_BUTTON),
@@ -253,30 +298,20 @@ void app_main(void)
     ESP_ERROR_CHECK(gpio_config(&boot_button_config));
     vTaskDelay(250/portTICK_PERIOD_MS);
 
-    util_rgb_init(colors, RGB_MODE_GRB);
+    util_rgb_init(led_colors, RGB_MODE_GRB);
     rgb_setbrightness(255);
 
-    rgb_setall(COLOR_RED, colors);
+    rgb_setall(COLOR_RED, led_colors);
     rgb_show();
-    vTaskDelay(800/portTICK_PERIOD_MS);
-    rgb_setall(COLOR_ORANGE, colors);
-    rgb_show();
-    vTaskDelay(800/portTICK_PERIOD_MS);
-    rgb_setall(COLOR_YELLOW, colors);
-    rgb_show();
-    vTaskDelay(800/portTICK_PERIOD_MS);
-    rgb_setall(COLOR_GREEN, colors);
-    rgb_show();
-    vTaskDelay(800/portTICK_PERIOD_MS);
-    rgb_setall(COLOR_BLUE, colors);
-    rgb_show();
-    vTaskDelay(800/portTICK_PERIOD_MS);
-    rgb_setall(COLOR_PURPLE, colors);
-    rgb_show();
-    vTaskDelay(800/portTICK_PERIOD_MS);
-    
 
     gamecube_reader_start();
+    gcusb_start(USB_MODE_GC);
 
+    
     xTaskCreatePinnedToCore(main_gamecube_task, "gc_task", 4048, NULL, 0, &usb_task_handle, 1);
+
+    #if ADAPTER_DEBUG_ENABLE
+    vTaskDelay(1000/portTICK_PERIOD_MS);
+    xTaskCreatePinnedToCore(debug_task, "debug_task", 2048, NULL, 0, &debug_task_handle, 0);
+    #endif
 }

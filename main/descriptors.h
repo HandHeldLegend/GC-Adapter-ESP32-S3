@@ -3,13 +3,9 @@
 
 #include "adapter_includes.h"
 
-#define TUSB_DESC_TOTAL_LEN      (TUD_CONFIG_DESC_LEN + CFG_TUD_HID * TUD_HID_DESC_LEN)
-
 // NS mode definitions
-#define NS_HID_LEN  8
-extern const uint8_t ns_hid_report_descriptor[94];
-extern uint8_t ns_buffer[NS_HID_LEN];
-extern const uint8_t ns_hid_configuration_descriptor[];
+#define NS_HID_LEN      8
+extern uint8_t          ns_buffer[NS_HID_LEN];
 
 // Input structure for Nintendo Switch USB gamepad Data
 typedef struct
@@ -57,9 +53,9 @@ typedef struct
 extern ns_input_s ns_input;
 
 // GC mode definitions
+/********************************/
 #define GC_HID_LEN 37
-extern const uint8_t gc_hid_report_descriptor[];
-extern uint8_t gc_buffer[GC_HID_LEN];
+
 
 // Generic mode definitions
 // Generic mode is used for configuration as well.
@@ -75,6 +71,49 @@ TLA
 TRA
 */
 #define GENERIC_HID_LEN 9
-extern const uint8_t generic_hid_report_descriptor[];
+
+// Input structure for Nintendo GameCube Adapter USB Data
+typedef struct
+{
+    union
+    {
+        struct
+        {
+            uint8_t button_a    : 1;
+            uint8_t button_b    : 1;
+            uint8_t button_x    : 1;
+            uint8_t button_y    : 1;
+            uint8_t dpad_left   : 1; //Left
+            uint8_t dpad_right  : 1; //Right
+            uint8_t dpad_down   : 1; //Down
+            uint8_t dpad_up     : 1; //Up
+        };
+        uint8_t buttons_1;
+    };
+
+    union
+    {
+        struct
+        {
+            uint8_t button_start: 1;
+            uint8_t button_z    : 1;
+            uint8_t button_r    : 1;
+            uint8_t button_l    : 1;
+            uint8_t blank1      : 4;
+        }; 
+        uint8_t buttons_2;
+    };
+
+  uint8_t stick_x;
+  uint8_t stick_y;
+  uint8_t cstick_x;
+  uint8_t cstick_y;
+  uint8_t trigger_l;
+  uint8_t trigger_r;
+
+} gc_input_s;
+
+extern gc_input_s       gc_input;
+extern uint8_t          gc_buffer[GC_HID_LEN];
 
 #endif
