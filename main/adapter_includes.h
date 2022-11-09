@@ -22,6 +22,7 @@
 // USB
 #include "tinyusb.h"
 #include "class/hid/hid_device.h"
+#include "tusb_tasks.h"
 
 // FreeRTOS
 #include "freertos/FreeRTOS.h"
@@ -36,6 +37,7 @@
 #include "descriptors.h"
 #include "util_rgb.h"
 #include "util_usb.h"
+#include "adapter_memory.h"
 
 // Drivers
 #include "driver/gpio.h"
@@ -58,5 +60,9 @@
 
 // ROM
 #include "rom/gpio.h"
+
+// Storage
+#include "nvs_flash.h"
+#include "nvs.h"
 
 #endif

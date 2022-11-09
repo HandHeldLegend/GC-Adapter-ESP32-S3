@@ -115,7 +115,11 @@ esp_err_t gamecube_reader_start()
     rx_offset       = RMT.chmstatus[0].mem_waddr_ex_chm;
     ESP_LOGI("SETUPPHASE", "Offset: %X", (unsigned int) rx_offset);
 
-    rmt_isr_register(gamecube_rmt_isr, NULL, 3, NULL);
+    esp_err_t err = rmt_isr_register(gamecube_rmt_isr, NULL, 0, NULL);
+    if (err != ESP_OK)
+    {
+        ESP_LOGI(esp_err_to_name(err), "%d", (unsigned int) err);
+    }
 
-    return ESP_OK;
+    return err;
 }

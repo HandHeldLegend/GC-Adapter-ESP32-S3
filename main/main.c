@@ -12,6 +12,8 @@ static const char *TAG = "Mitch GC Pro Adapter";
 
 rgb_s led_colors[GC_LED_COUNT] = {COLOR_RED};
 TaskHandle_t usb_task_handle = NULL;
+bool mode_change_toggle = false;
+bool mode_button_pressed = false;
 #if ADAPTER_DEBUG_ENABLE
 TaskHandle_t debug_task_handle = NULL;
 #endif
@@ -278,6 +280,27 @@ void main_gamecube_task(void *parameters)
                 JB_RX_BEGIN     = 1;
                 JB_TX_BEGIN     = 1;
             }
+
+            if (!gpio_get_level(APP_BUTTON) && !mode_button_pressed)
+            {
+                mode_button_pressed = true;
+            }
+            else if (gpio_get_level(APP_BUTTON) && mode_button_pressed)
+            {
+                mode_change_toggle = true;
+            }
+
+            if (mode_change_toggle)
+            {
+                mode_change_toggle = false;
+                adapter_mode += 1;
+                if (adapter_mode == USB_MODE_MAX)
+                {
+                    adapter_mode = USB_MODE_NS;
+                }
+                save_adapter_mode();
+                esp_restart();
+            }
             
         }
     
@@ -286,7 +309,6 @@ void main_gamecube_task(void *parameters)
 
 void app_main(void)
 {
-
     // Initialize button that will trigger HID reports
     const gpio_config_t boot_button_config = {
         .pin_bit_mask = BIT64(APP_BUTTON),
@@ -298,16 +320,28 @@ void app_main(void)
     ESP_ERROR_CHECK(gpio_config(&boot_button_config));
     vTaskDelay(250/portTICK_PERIOD_MS);
 
+    load_adapter_mode();
+
     util_rgb_init(led_colors, RGB_MODE_GRB);
     rgb_setbrightness(255);
 
-    rgb_setall(COLOR_RED, led_colors);
+    cmd_phase = CMD_PHASE_PROBE;
+
+    switch(adapter_mode)
+    {
+        default:
+        case USB_MODE_NS:
+            rgb_setall(COLOR_RED, led_colors);
+        break;
+        case USB_MODE_GC:
+            rgb_setall(COLOR_PURPLE, led_colors);
+        break;
+    }
+    
     rgb_show();
 
+    gcusb_start(adapter_mode);
     gamecube_reader_start();
-    gcusb_start(USB_MODE_GC);
-
-    
     xTaskCreatePinnedToCore(main_gamecube_task, "gc_task", 4048, NULL, 0, &usb_task_handle, 1);
 
     #if ADAPTER_DEBUG_ENABLE

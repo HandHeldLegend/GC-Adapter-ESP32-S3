@@ -99,6 +99,7 @@ extern util_rgb_mode_t util_rgb_mode;
 #define COLOR_BLUE      (rgb_s) {.rgb = 0x0000FF}
 #define COLOR_VIOLET    (rgb_s) {.rgb = 0x8000FF}
 #define COLOR_PURPLE    (rgb_s) {.rgb = 0xFF00FF}
+#define COLOR_PINK      (rgb_s) {.rgb = 0xFFC0CB}
 
 // Blend two colors together.
 // color1 - The first color

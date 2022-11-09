@@ -169,7 +169,7 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint8_t
     {
         default:
         case USB_MODE_NS:
-            
+            usb_clear = true;
             break;
         case USB_MODE_GC:
             if (report[0] == 0x21)
@@ -177,9 +177,9 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint8_t
                 usb_clear = true;
             }
             break;
-        case USB_MODE_GENERIC:
+        /*case USB_MODE_GENERIC:
             //return generic_hid_report_descriptor;
-            break;
+            break;*/
     }
     
 }
@@ -203,9 +203,9 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_
                 }
             }
             break;
-        case USB_MODE_GENERIC:
+        /*case USB_MODE_GENERIC:
             //return generic_hid_report_descriptor;
-            break;
+            break;*/
     }  
 }
 
@@ -218,14 +218,14 @@ uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance)
     {
         default:
         case USB_MODE_NS:
-            return gc_hid_report_descriptor;
-            break;
-        case USB_MODE_GC:
             return ns_hid_report_descriptor;
             break;
-        case USB_MODE_GENERIC:
-            //return generic_hid_report_descriptor;
+        case USB_MODE_GC:
+            return gc_hid_report_descriptor;
             break;
+        /*case USB_MODE_GENERIC:
+            //return generic_hid_report_descriptor;
+            break;*/
     }
     return NULL;
 }
@@ -303,13 +303,7 @@ esp_err_t gcusb_start(usb_mode_t mode)
 {
     const char* TAG = "gcusb_start";
 
-    if (adapter_status != GCSTATUS_IDLE)
-    {
-        gcusb_stop();
-    }
-
     ESP_LOGI(TAG, "USB initialization");
-    adapter_mode    = mode;
 
     switch (mode)
     {
@@ -331,11 +325,11 @@ esp_err_t gcusb_start(usb_mode_t mode)
 
             ESP_ERROR_CHECK(tinyusb_driver_install(&gc_cfg));
             break;
-        case USB_MODE_GENERIC:
+        /*case USB_MODE_GENERIC:
             //tusb_cfg.configuration_descriptor = generic_hid_configuration_descriptor;
-            break;
+            break;*/
     }
-    
+
     adapter_status  = GCSTATUS_WORKING;
     return ESP_OK;
 }
@@ -391,7 +385,11 @@ void gcusb_send_data()
 
             memcpy(&ns_buffer, &ns_input, NS_HID_LEN);
             // Send USB report
-            tud_hid_report(0, &ns_buffer, NS_HID_LEN);
+            if (usb_clear)
+            {
+                tud_hid_report(0, &ns_buffer, NS_HID_LEN);
+                usb_clear = false;
+            }
             break;
         case USB_MODE_GC:
             // Generate the USB Data for GameCube native mode
@@ -440,8 +438,8 @@ void gcusb_send_data()
             first = true;
             
             break;
-        case USB_MODE_GENERIC:
+        /*case USB_MODE_GENERIC:
 
-            break;
+            break;*/
     }
 }
