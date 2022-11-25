@@ -18,6 +18,7 @@
 #include "esp_attr.h"
 #include "esp_private/gdma.h"
 #include "esp_check.h"
+#include "rom/ets_sys.h"
 
 // USB
 #include "tinyusb.h"

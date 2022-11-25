@@ -41,6 +41,6 @@ esp_err_t gcusb_start(usb_mode_t mode);
 
 void gcusb_stop();
 
-void gcusb_send_data();
+void gcusb_send_data(bool repeat);
 
 #endif

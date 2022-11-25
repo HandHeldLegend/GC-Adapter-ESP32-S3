@@ -33,7 +33,7 @@ void debug_task(void *parameters)
         vTaskDelay(8/portTICK_PERIOD_MS);
     }
 }
-
+bool dtoggle = false;
 /********* Application ***************/
 void main_gamecube_task(void *parameters) 
 {
@@ -58,7 +58,7 @@ void main_gamecube_task(void *parameters)
                     gc_poll_response.button_a = b;
                     if (adapter_status == GCSTATUS_WORKING)
                     {
-                        gcusb_send_data();
+                        gcusb_send_data(false);
                     }
                     break;
                 default:
@@ -186,69 +186,81 @@ void main_gamecube_task(void *parameters)
                     JB_TX_BEGIN     = 1;
                     
                 case CMD_PHASE_POLL:
-                    if (rx_offset != GC_POLL_RESPONSE_LEN)
-                    {
-                        ESP_LOGI("POLLPHASE", "Poll Phase Reponse Length Error.");
-                    }
-                    else
-                    {
-                        memset(&gc_poll_response, 0, 3);
+                    
+                    memset(&gc_poll_response, 0, 3);
 
-                        for (uint8_t i = 0; i < 3; i++)
+                    for (uint8_t i = 0; i < 3; i++)
+                    {
+                        gc_poll_response.buttons_1 |= ((JB_RX_MEM[i].duration0 < JB_RX_MEM[i].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    // Toss out junk data
+                    if (!gc_poll_response.b1blank && rx_offset == GC_POLL_RESPONSE_LEN)
+                    {
+                        rx_offset = 0;
+                        memset(&gc_poll_response, 0, sizeof(gc_poll_response));
+
+                        for (uint8_t i = 3; i < 8; i++)
                         {
                             gc_poll_response.buttons_1 |= ((JB_RX_MEM[i].duration0 < JB_RX_MEM[i].duration1) ? 1 : 0) << (7-i);
                         }
 
-                        // Toss out junk data
-                        if (!gc_poll_response.b1blank)
+                        for (uint8_t i = 0; i < 8; i++)
                         {
-                            memset(&gc_poll_response, 0, sizeof(gc_poll_response));
+                            gc_poll_response.buttons_2 |= ((JB_RX_MEM[i+8].duration0 < JB_RX_MEM[i+8].duration1) ? 1 : 0) << (7-i);
+                        }
 
-                            for (uint8_t i = 3; i < 8; i++)
-                            {
-                                gc_poll_response.buttons_1 |= ((JB_RX_MEM[i].duration0 < JB_RX_MEM[i].duration1) ? 1 : 0) << (7-i);
-                            }
+                        for (uint8_t i = 0; i < 8; i++)
+                        {
+                            gc_poll_response.stick_x |= ((JB_RX_MEM[i+16].duration0 < JB_RX_MEM[i+16].duration1) ? 1 : 0) << (7-i);
+                        }
 
-                            for (uint8_t i = 0; i < 8; i++)
-                            {
-                                gc_poll_response.buttons_2 |= ((JB_RX_MEM[i+8].duration0 < JB_RX_MEM[i+8].duration1) ? 1 : 0) << (7-i);
-                            }
+                        for (uint8_t i = 0; i < 8; i++)
+                        {
+                            gc_poll_response.stick_y |= ((JB_RX_MEM[i+24].duration0 < JB_RX_MEM[i+24].duration1) ? 1 : 0) << (7-i);
+                        }
 
-                            for (uint8_t i = 0; i < 8; i++)
-                            {
-                                gc_poll_response.stick_x |= ((JB_RX_MEM[i+16].duration0 < JB_RX_MEM[i+16].duration1) ? 1 : 0) << (7-i);
-                            }
+                        for (uint8_t i = 0; i < 8; i++)
+                        {
+                            gc_poll_response.cstick_x |= ((JB_RX_MEM[i+32].duration0 < JB_RX_MEM[i+32].duration1) ? 1 : 0) << (7-i);
+                        }
 
-                            for (uint8_t i = 0; i < 8; i++)
-                            {
-                                gc_poll_response.stick_y |= ((JB_RX_MEM[i+24].duration0 < JB_RX_MEM[i+24].duration1) ? 1 : 0) << (7-i);
-                            }
+                        for (uint8_t i = 0; i < 8; i++)
+                        {
+                            gc_poll_response.cstick_y |= ((JB_RX_MEM[i+40].duration0 < JB_RX_MEM[i+40].duration1) ? 1 : 0) << (7-i);
+                        }
 
-                            for (uint8_t i = 0; i < 8; i++)
-                            {
-                                gc_poll_response.cstick_x |= ((JB_RX_MEM[i+32].duration0 < JB_RX_MEM[i+32].duration1) ? 1 : 0) << (7-i);
-                            }
+                        for (uint8_t i = 0; i < 8; i++)
+                        {
+                            gc_poll_response.trigger_l |= ((JB_RX_MEM2[i].duration0 < JB_RX_MEM2[i].duration1) ? 1 : 0) << (7-i);
+                        }
 
-                            for (uint8_t i = 0; i < 8; i++)
-                            {
-                                gc_poll_response.cstick_y |= ((JB_RX_MEM[i+40].duration0 < JB_RX_MEM[i+40].duration1) ? 1 : 0) << (7-i);
-                            }
-
-                            for (uint8_t i = 0; i < 8; i++)
-                            {
-                                gc_poll_response.trigger_l |= ((JB_RX_MEM2[i].duration0 < JB_RX_MEM2[i].duration1) ? 1 : 0) << (7-i);
-                            }
-
-                            for (uint8_t i = 0; i < 8; i++)
-                            {
-                                gc_poll_response.trigger_r |= ((JB_RX_MEM2[i+8].duration0 < JB_RX_MEM2[i+8].duration1) ? 1 : 0) << (7-i);
-                            }
-
+                        for (uint8_t i = 0; i < 8; i++)
+                        {
+                            gc_poll_response.trigger_r |= ((JB_RX_MEM2[i+8].duration0 < JB_RX_MEM2[i+8].duration1) ? 1 : 0) << (7-i);
                         }
 
                         if (adapter_status == GCSTATUS_WORKING)
                         {
-                            gcusb_send_data();
+                            gcusb_send_data(false);
+                        }
+
+                    }
+                    else
+                    {
+                        if (dtoggle)
+                        {
+                            rgb_setall(COLOR_PINK, led_colors);
+                        }
+                        else
+                        {
+                            rgb_setall(COLOR_BLUE, led_colors);
+                        }
+                        rgb_show();
+                        dtoggle = !dtoggle;
+                        if (adapter_status == GCSTATUS_WORKING)
+                        {
+                            gcusb_send_data(true);
                         }
                     }
 
@@ -274,9 +286,11 @@ void main_gamecube_task(void *parameters)
                 #endif
 
                 JB_RX_MEMOWNER  = 1;
+                JB_RX_RDRST     = 1;
+                JB_RX_RDRST     = 0;
                 JB_RX_BEGIN     = 0;
                 JB_RX_SYNC      = 1;
-                
+                JB_RX_CLEARISR  = 1;
                 JB_RX_BEGIN     = 1;
                 JB_TX_BEGIN     = 1;
             }
