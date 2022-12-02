@@ -61,6 +61,7 @@ void main_gamecube_task(void *parameters)
                         gcusb_send_data(false);
                     }
                     break;
+
                 default:
                 case CMD_PHASE_PROBE:
                     if (rx_offset != GC_PROBE_RESPONSE_LEN)
@@ -248,16 +249,6 @@ void main_gamecube_task(void *parameters)
                     }
                     else
                     {
-                        if (dtoggle)
-                        {
-                            rgb_setall(COLOR_PINK, led_colors);
-                        }
-                        else
-                        {
-                            rgb_setall(COLOR_BLUE, led_colors);
-                        }
-                        rgb_show();
-                        dtoggle = !dtoggle;
                         if (adapter_status == GCSTATUS_WORKING)
                         {
                             gcusb_send_data(true);
@@ -276,7 +267,8 @@ void main_gamecube_task(void *parameters)
             rx_timeout+=1;
             if (rx_timeout > 1000)
             {
-                rgb_setall(COLOR_YELLOW, led_colors);
+                rx_timeout = 0;
+                rgb_setall(COLOR_RED, led_colors);
                 rgb_show();
                 memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
                 #if ADAPTER_DEBUG_ENABLE
@@ -292,6 +284,10 @@ void main_gamecube_task(void *parameters)
                 JB_RX_SYNC      = 1;
                 JB_RX_CLEARISR  = 1;
                 JB_RX_BEGIN     = 1;
+
+                JB_TX_RDRST     = 1;
+                JB_TX_WRRST     = 1;
+                JB_TX_CLEARISR  = 1;
                 JB_TX_BEGIN     = 1;
             }
 
@@ -317,7 +313,6 @@ void main_gamecube_task(void *parameters)
             }
             
         }
-    
     }
 }
 
@@ -332,7 +327,7 @@ void app_main(void)
         .pull_down_en = false,
     };
     ESP_ERROR_CHECK(gpio_config(&boot_button_config));
-    vTaskDelay(250/portTICK_PERIOD_MS);
+    vTaskDelay(500/portTICK_PERIOD_MS);
 
     load_adapter_mode();
 
@@ -345,10 +340,13 @@ void app_main(void)
     {
         default:
         case USB_MODE_NS:
-            rgb_setall(COLOR_RED, led_colors);
+            rgb_setall(COLOR_YELLOW, led_colors);
         break;
         case USB_MODE_GC:
             rgb_setall(COLOR_PURPLE, led_colors);
+        break;
+        case USB_MODE_GENERIC:
+            rgb_setall(COLOR_BLUE, led_colors);
         break;
     }
     
@@ -356,7 +354,7 @@ void app_main(void)
 
     gcusb_start(adapter_mode);
     gamecube_reader_start();
-    xTaskCreatePinnedToCore(main_gamecube_task, "gc_task", 4048, NULL, 0, &usb_task_handle, 1);
+    xTaskCreatePinnedToCore(main_gamecube_task, "gc_task", 6000, NULL, 0, &usb_task_handle, 1);
 
     #if ADAPTER_DEBUG_ENABLE
     vTaskDelay(1000/portTICK_PERIOD_MS);

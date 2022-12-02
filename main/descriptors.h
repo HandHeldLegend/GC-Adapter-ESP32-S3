@@ -7,6 +7,10 @@
 #define NS_HID_LEN      8
 extern uint8_t          ns_buffer[NS_HID_LEN];
 
+// Generic HID definitions
+#define GP_HID_LEN      10
+extern uint8_t          hid_buffer[GP_HID_LEN];
+
 // Input structure for Nintendo Switch USB gamepad Data
 typedef struct
 {
@@ -46,31 +50,19 @@ typedef struct
   uint8_t stick_left_y;
   uint8_t stick_right_x;
   uint8_t stick_right_y;
+  uint8_t analog_trigger_l;
+  uint8_t analog_trigger_r;
   uint8_t dummy_2;
 
 } ns_input_s;
 
 extern ns_input_s ns_input;
+//Reuse ns_input_s for generic input
+extern ns_input_s hid_input;
 
 // GC mode definitions
 /********************************/
 #define GC_HID_LEN 37
-
-
-// Generic mode definitions
-// Generic mode is used for configuration as well.
-/*
-A B X Y L R START SELECT
-Z U1 U2 U3 U4 U5 U6 U7
-DPAD HAT
-LX
-LY
-RX
-RY
-TLA
-TRA
-*/
-#define GENERIC_HID_LEN 9
 
 // Input structure for Nintendo GameCube Adapter USB Data
 typedef struct

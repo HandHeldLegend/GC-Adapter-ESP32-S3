@@ -52,7 +52,7 @@ static void gamecube_rmt_isr(void* arg)
     {
         rx_offset       = RMT.chmstatus[0].mem_waddr_ex_chm - GC_MEM_OFFSET;
         rx_timeout      = 0;
-        JB_RX_MEMOWNER  = 0;
+        JB_RX_MEMOWNER  = 1;
         JB_RX_RDRST     = 1;
         JB_RX_RDRST     = 0;
         JB_RX_BEGIN     = 0;
@@ -120,6 +120,8 @@ esp_err_t gamecube_reader_start()
     {
         ESP_LOGI(esp_err_to_name(err), "%d", (unsigned int) err);
     }
+
+    JB_TX_BEGIN     = 1;
 
     return err;
 }
