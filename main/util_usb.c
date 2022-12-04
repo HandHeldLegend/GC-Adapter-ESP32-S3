@@ -221,11 +221,9 @@ const uint8_t xi_hid_report_descriptor[] = {
     0x09, 0x30,        //   Usage (X)
     0x09, 0x31,        //   Usage (Y)
     0x09, 0x32,        //   Usage (Z)
-    0x09, 0x35,        //   Usage (Rz)
-
-    // EXPERIMENTAL ADDITIONS
     0x09, 0x33,
     0x09, 0x34,
+    0x09, 0x35,        //   Usage (Rz)
 
     0x75, 0x08,        //   Report Size (8)
     0x95, 0x06,        //   Report Count (6)
