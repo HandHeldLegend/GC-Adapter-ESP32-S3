@@ -110,7 +110,7 @@ extern uint8_t          gc_buffer[GC_HID_LEN];
 
 // xInput mode definitions
 /********************************/
-#define XI_HID_LEN 11
+#define XI_HID_LEN 10
 
 typedef struct
 {
@@ -124,9 +124,9 @@ typedef struct
             uint8_t button_b    : 1; // Button 1
             uint8_t button_x    : 1; // Button 2
             uint8_t button_y    : 1; // Button 3
-            uint8_t bumper_l    : 1; // Verified Fixed
-            uint8_t bumper_r    : 1; // Verified Fixed
-            uint8_t trigger_l   : 1; // Verified Fixed
+            uint8_t bumper_l    : 1; // Bumper L
+            uint8_t bumper_r    : 1; // Bumper R
+            uint8_t trigger_l   : 1;  //Verified Fixed
             uint8_t trigger_r   : 1;
         };
         uint8_t buttons_1;
@@ -136,29 +136,26 @@ typedef struct
     {
         struct
         {
-            uint8_t button_right_stick    : 1;
-            uint8_t button_start    : 1;
-            uint8_t button_guide    : 1;
-            uint8_t dpad_up    : 1;
-            uint8_t dpad_down : 1;
-            uint8_t dpad_left: 1;
-            uint8_t dpad_right: 1;
-            uint8_t button_back : 1;
+            uint8_t button_back     : 1;    // Button back
+            uint8_t button_menu     : 1;    // Button menu
+            uint8_t button_left_stick: 1;   // Button left stick
+            uint8_t button_right_stick: 1;  // Button right stick
+            uint8_t dpad_up     : 1;    // Dpad Up
+            uint8_t dpad_down   : 1;    // Dpad Down
+            uint8_t dpad_left   : 1;    // Dpad Left
+            uint8_t dpad_right  : 1;    // Dpad Right
         }; 
         uint8_t buttons_2;
     };
 
-    uint8_t dpad_hat;
+    uint8_t button_guide;
 
     uint8_t stick_left_x;
     uint8_t stick_left_y;
     uint8_t stick_right_x;
     uint8_t stick_right_y;
-
     uint8_t analog_trigger_l;
     uint8_t analog_trigger_r;
-
-    uint8_t dummy_1;
 
 } xi_input_s;
 
