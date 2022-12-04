@@ -10,6 +10,7 @@ typedef enum
     USB_MODE_NS,
     USB_MODE_GC,
     USB_MODE_GENERIC,
+    USB_MODE_XINPUT,
     USB_MODE_MAX,
 } usb_mode_t;
 

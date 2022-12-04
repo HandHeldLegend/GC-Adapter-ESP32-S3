@@ -67,10 +67,10 @@ typedef struct
     {
         struct
         {
-            uint8_t button_dl       : 1;
-            uint8_t button_dr       : 1;
-            uint8_t button_dd       : 1;
-            uint8_t button_du       : 1;
+            uint8_t dpad_left       : 1;
+            uint8_t dpad_right      : 1;
+            uint8_t dpad_down       : 1;
+            uint8_t dpad_up         : 1;
             uint8_t button_z        : 1;
             uint8_t button_r        : 1;
             uint8_t button_l        : 1;

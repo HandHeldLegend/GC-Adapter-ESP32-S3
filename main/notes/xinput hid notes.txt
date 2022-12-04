@@ -1,0 +1,32 @@
+xInput DOES have an HID driver
+
+Input report format as follows (I think)
+
+Stick inputs are represented as 16 bit unsigned ints
+
+0 - X axis left stick
+1
+
+2 - Y axis left stick
+3
+
+4 - X axis right stick
+5 
+
+6 - Y axis right stick
+7
+
+Triggers are represented by 10 bits unsigned ints inside of a 16 bit unsigned int.
+
+8 - trigger left analog (only 10 bits)
+9
+
+10 - trigger right analog (only 10 bits)
+11
+
+Byte 12 is dpad hat
+12 - dpad hat
+
+Bytes 13/14 are buttons
+13 - buttons
+14 - buttons

@@ -130,61 +130,192 @@ const uint8_t hid_report_descriptor[] = {
 
 const uint8_t gc_hid_report_descriptor[] = {
     0x05, 0x01,        // Usage Page (Generic Desktop Ctrls)
-0x09, 0x05,        // Usage (Game Pad)
-0xA1, 0x01,        // Collection (Application)
-0xA1, 0x03,        //   Collection (Report)
-0x85, 0x11,        //     Report ID (17)
-0x19, 0x00,        //     Usage Minimum (Undefined)
-0x2A, 0xFF, 0x00,  //     Usage Maximum (0xFF)
-0x15, 0x00,        //     Logical Minimum (0)
-0x26, 0xFF, 0x00,  //     Logical Maximum (255)
-0x75, 0x08,        //     Report Size (8)
-0x95, 0x05,        //     Report Count (5)
-0x91, 0x00,        //     Output (Data,Array,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
-0xC0,              //   End Collection
-0xA1, 0x03,        //   Collection (Report)
-0x85, 0x21,        //     Report ID (33)
-0x05, 0x00,        //     Usage Page (Undefined)
-0x15, 0x00,        //     Logical Minimum (0)
-0x25, 0xFF,        //     Logical Maximum (-1)
-0x75, 0x08,        //     Report Size (8)
-0x95, 0x01,        //     Report Count (1)
-0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-0x05, 0x09,        //     Usage Page (Button)
-0x19, 0x01,        //     Usage Minimum (0x01)
-0x29, 0x08,        //     Usage Maximum (0x08)
-0x15, 0x00,        //     Logical Minimum (0)
-0x25, 0x01,        //     Logical Maximum (1)
-0x75, 0x08,        //     Report Size (8)
-0x95, 0x02,        //     Report Count (2)
-0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-0x05, 0x01,        //     Usage Page (Generic Desktop Ctrls)
-0x09, 0x30,        //     Usage (X)
-0x09, 0x31,        //     Usage (Y)
-0x09, 0x32,        //     Usage (Z)
-0x09, 0x33,        //     Usage (Rx)
-0x09, 0x34,        //     Usage (Ry)
-0x09, 0x35,        //     Usage (Rz)
-0x15, 0x81,        //     Logical Minimum (-127)
-0x25, 0x7F,        //     Logical Maximum (127)
-0x75, 0x08,        //     Report Size (8)
-0x95, 0x06,        //     Report Count (6)
-0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-0xC0,              //   End Collection
-0xA1, 0x03,        //   Collection (Report)
-0x85, 0x13,        //     Report ID (19)
-0x19, 0x00,        //     Usage Minimum (Undefined)
-0x2A, 0xFF, 0x00,  //     Usage Maximum (0xFF)
-0x15, 0x00,        //     Logical Minimum (0)
-0x26, 0xFF, 0x00,  //     Logical Maximum (255)
-0x75, 0x08,        //     Report Size (8)
-0x95, 0x01,        //     Report Count (1)
-0x91, 0x00,        //     Output (Data,Array,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
-0xC0,              //   End Collection
-0xC0,              // End Collection
+    0x09, 0x05,        // Usage (Game Pad)
+    0xA1, 0x01,        // Collection (Application)
+    0xA1, 0x03,        //   Collection (Report)
+    0x85, 0x11,        //     Report ID (17)
+    0x19, 0x00,        //     Usage Minimum (Undefined)
+    0x2A, 0xFF, 0x00,  //     Usage Maximum (0xFF)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x26, 0xFF, 0x00,  //     Logical Maximum (255)
+    0x75, 0x08,        //     Report Size (8)
+    0x95, 0x05,        //     Report Count (5)
+    0x91, 0x00,        //     Output (Data,Array,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xC0,              //   End Collection
+    0xA1, 0x03,        //   Collection (Report)
+    0x85, 0x21,        //     Report ID (33)
+    0x05, 0x00,        //     Usage Page (Undefined)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x25, 0xFF,        //     Logical Maximum (-1)
+    0x75, 0x08,        //     Report Size (8)
+    0x95, 0x01,        //     Report Count (1)
+    0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0x05, 0x09,        //     Usage Page (Button)
+    0x19, 0x01,        //     Usage Minimum (0x01)
+    0x29, 0x08,        //     Usage Maximum (0x08)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x25, 0x01,        //     Logical Maximum (1)
+    0x75, 0x08,        //     Report Size (8)
+    0x95, 0x02,        //     Report Count (2)
+    0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0x05, 0x01,        //     Usage Page (Generic Desktop Ctrls)
+    0x09, 0x30,        //     Usage (X)
+    0x09, 0x31,        //     Usage (Y)
+    0x09, 0x32,        //     Usage (Z)
+    0x09, 0x33,        //     Usage (Rx)
+    0x09, 0x34,        //     Usage (Ry)
+    0x09, 0x35,        //     Usage (Rz)
+    0x15, 0x81,        //     Logical Minimum (-127)
+    0x25, 0x7F,        //     Logical Maximum (127)
+    0x75, 0x08,        //     Report Size (8)
+    0x95, 0x06,        //     Report Count (6)
+    0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0xC0,              //   End Collection
+    0xA1, 0x03,        //   Collection (Report)
+    0x85, 0x13,        //     Report ID (19)
+    0x19, 0x00,        //     Usage Minimum (Undefined)
+    0x2A, 0xFF, 0x00,  //     Usage Maximum (0xFF)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x26, 0xFF, 0x00,  //     Logical Maximum (255)
+    0x75, 0x08,        //     Report Size (8)
+    0x95, 0x01,        //     Report Count (1)
+    0x91, 0x00,        //     Output (Data,Array,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xC0,              //   End Collection
+    0xC0,              // End Collection
 };
 
-/**** Kconfig driven Descriptor ****/
+const uint8_t xi_hid_report_descriptor[] = {
+    0x05, 0x01,        // Usage Page (Generic Desktop Ctrls)
+    0x09, 0x05,        // Usage (Game Pad)
+    0xA1, 0x01,        // Collection (Application)
+
+    0x85, 0x01,        //   Report ID (1)
+    0x15, 0x00,        //   Logical Minimum (0)
+    0x25, 0x01,        //   Logical Maximum (1)
+    0x35, 0x00,        //   Physical Minimum (0)
+    0x45, 0x01,        //   Physical Maximum (1)
+    0x75, 0x01,        //   Report Size (1)
+    0x95, 0x0E,        //   Report Count (14)
+    0x05, 0x09,        //   Usage Page (Button)
+
+    0x19, 0x01,        //   Usage Minimum (0x01)
+    0x29, 0x0E,        //   Usage Maximum (0x0E)
+    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0x95, 0x02,        //   Report Count (2)
+    0x81, 0x01,        //   Input (Const,Array,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0x05, 0x01,        //   Usage Page (Generic Desktop Ctrls)
+
+    0x25, 0x07,        //   Logical Maximum (7)
+    0x46, 0x3B, 0x01,  //   Physical Maximum (315)
+    0x75, 0x04,        //   Report Size (4)
+    0x95, 0x01,        //   Report Count (1)
+    0x65, 0x14,        //   Unit (System: English Rotation, Length: Centimeter)
+    0x09, 0x39,        //   Usage (Hat switch)
+    0x81, 0x42,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,Null State)
+    0x65, 0x00,        //   Unit (None)
+    0x95, 0x01,        //   Report Count (1)
+    0x81, 0x01,        //   Input (Const,Array,Abs,No Wrap,Linear,Preferred State,No Null Position)
+
+    0x26, 0xFF, 0x00,  //   Logical Maximum (255)
+    0x46, 0xFF, 0x00,  //   Physical Maximum (255)
+    0x09, 0x30,        //   Usage (X)
+    0x09, 0x31,        //   Usage (Y)
+    0x09, 0x32,        //   Usage (Z)
+    0x09, 0x35,        //   Usage (Rz)
+
+    // EXPERIMENTAL ADDITIONS
+    0x09, 0x33,
+    0x09, 0x34,
+
+    0x75, 0x08,        //   Report Size (8)
+    0x95, 0x06,        //   Report Count (6)
+    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+
+    0x75, 0x08,        //   Report Size (8)
+    0x95, 0x01,        //   Report Count (1)
+    0x81, 0x01,        //   Input (Const,Array,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0x05, 0x0C,        //   Usage Page (Consumer)
+
+    0x09, 0x00,        //   Usage (Unassigned)
+    0x15, 0x80,        //   Logical Minimum (-128)
+    0x25, 0x7F,        //   Logical Maximum (127)
+    0x75, 0x08,        //   Report Size (8)
+    0x95, 0x40,        //   Report Count (64)
+    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+
+    // End of Input part
+
+    // RUMBLE REPORTS
+    0x05, 0x0F,        //   Usage Page (PID Page)
+    0x09, 0x21,        //   Usage (0x21)
+
+    // Byte 1 report ID
+    0x85, 0x03,        //   Report ID (3)
+
+    // Byte 2 function
+    // 0x0F = Enable Actuators
+    0xA1, 0x02,        //   Collection (Logical)
+    0x09, 0x97,        //     Usage (0x97)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x25, 0x01,        //     Logical Maximum (1)
+    0x75, 0x04,        //     Report Size (4)
+    0x95, 0x01,        //     Report Count (1)
+    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x25, 0x00,        //     Logical Maximum (0)
+    0x75, 0x04,        //     Report Size (4)
+    0x95, 0x01,        //     Report Count (1)
+    0x91, 0x03,        //     Output (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+
+    0x09, 0x70,        //     Usage (0x70)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x25, 0x64,        //     Logical Maximum (100)
+    0x75, 0x08,        //     Report Size (8)
+    0x95, 0x04,        //     Report Count (4)
+    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0x09, 0x50,        //     Usage (0x50)
+    0x66, 0x01, 0x10,  //     Unit (System: SI Linear, Time: Seconds)
+    0x55, 0x0E,        //     Unit Exponent (-2)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x26, 0xFF, 0x00,  //     Logical Maximum (255)
+    0x75, 0x08,        //     Report Size (8)
+    0x95, 0x01,        //     Report Count (1)
+    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    
+    0x09, 0xA7,        //     Usage (0xA7)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x26, 0xFF, 0x00,  //     Logical Maximum (255)
+    0x75, 0x08,        //     Report Size (8)
+    0x95, 0x01,        //     Report Count (1)
+    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0x65, 0x00,        //     Unit (None)
+    0x55, 0x00,        //     Unit Exponent (0)
+
+    0x09, 0x7C,        //     Usage (0x7C)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x26, 0xFF, 0x00,  //     Logical Maximum (255)
+    0x75, 0x08,        //     Report Size (8)
+    0x95, 0x01,        //     Report Count (1)
+    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xC0,              //   End Collection
+
+    // Battery level output
+
+    0x85, 0x04,        //   Report ID (4)
+    0x05, 0x06,        //   Usage Page (Generic Dev Ctrls)
+    0x09, 0x20,        //   Usage (Battery Strength)
+    0x15, 0x00,        //   Logical Minimum (0)
+    0x26, 0xFF, 0x00,  //   Logical Maximum (255)
+    0x75, 0x08,        //   Report Size (8)
+    0x95, 0x01,        //   Report Count (1)
+    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0xC0,              // End Collection
+
+    // 306 bytes
+};
+
+/**** GameCube Adapter Device Descriptor ****/
 static const tusb_desc_device_t gc_descriptor_dev = {
     .bLength = 18,
     .bDescriptorType = TUSB_DESC_DEVICE,
@@ -203,6 +334,28 @@ static const tusb_desc_device_t gc_descriptor_dev = {
     .iSerialNumber = 0x03,
     .bNumConfigurations = 0x01
 };
+
+/**** xInput Device Descriptor ****/
+static const tusb_desc_device_t xi_descriptor_dev = {
+    .bLength = 18,
+    .bDescriptorType = TUSB_DESC_DEVICE,
+    .bcdUSB = 0x0200,
+    .bDeviceClass = 0xFF,
+    .bDeviceSubClass = 0xFF,
+    .bDeviceProtocol = 0xFF,
+
+    .bMaxPacketSize0 = 64,
+    .idVendor = 0x045E,
+    .idProduct = 0x02E0,
+
+    .bcdDevice = 0x0114,
+    .iManufacturer = 0x01,
+    .iProduct = 0x02,
+    .iSerialNumber = 0x03,
+    .bNumConfigurations = 0x01
+};
+
+/**** GameCube Adapter Configuration Descriptor ****/
 
 #define GC_CGCDES_LEN   9 + 9 + 9 + 7 + 7
 static const uint8_t gc_hid_configuration_descriptor[] = {
@@ -224,6 +377,36 @@ static const tinyusb_config_t gc_cfg = {
                 .external_phy = false,
                 .configuration_descriptor = gc_hid_configuration_descriptor,
             };
+
+/**** xInput Configuration Descriptor ****/
+#define XI_CGCDES_LEN   9 + 9 + 9 + 7 + 7
+static const uint8_t xinput_configuration_descriptor[] = {
+    // Configuration number, interface count, string index, total length, attribute, power in mA
+    TUD_CONFIG_DESCRIPTOR(1, 1, 0, 41, TUSB_DESC_CONFIG_ATT_SELF_POWERED, 500),
+    // Interface
+    9, TUSB_DESC_INTERFACE, 0x00, 0x00, 0x02, TUSB_CLASS_HID, 0x00, 0x00, 0x00,
+    // HID Descriptor
+    9, HID_DESC_TYPE_HID, U16_TO_U8S_LE(0x0110), 0, 1, HID_DESC_TYPE_REPORT, U16_TO_U8S_LE(sizeof(xi_hid_report_descriptor)),
+    // Endpoint Descriptor
+    7, TUSB_DESC_ENDPOINT, 0x81, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(38), 1,
+    // Endpoint Descriptor
+    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(6), 8,
+};
+
+tusb_desc_strarray_device_t xi_descriptor_str = {
+    // array of pointer to string descriptors
+    (char[]){0x09, 0x04},                // 0: is supported language is English (0x0409)
+    "Microsoft", // 1: Manufacturer
+    "Xbox 360 Controller",      // 2: Product
+    CONFIG_TINYUSB_DESC_SERIAL_STRING,       // 3: Serials, should use chip ID
+};
+
+static const tinyusb_config_t xi_cfg = {
+                .device_descriptor = &xi_descriptor_dev,
+                .string_descriptor = &xi_descriptor_str,
+                .external_phy = false,
+                .configuration_descriptor = xinput_configuration_descriptor,
+};
 
 static const uint8_t ns_hid_configuration_descriptor[] = {
     // Configuration number, interface count, string index, total length, attribute, power in mA
@@ -263,6 +446,7 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint8_t
         default:
         case USB_MODE_NS:
         case USB_MODE_GENERIC:
+        case USB_MODE_XINPUT:
             usb_clear = true;
             break;
         case USB_MODE_GC:
@@ -316,6 +500,9 @@ uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance)
             break;
         case USB_MODE_GENERIC:
             return hid_report_descriptor;
+            break;
+        case USB_MODE_XINPUT:
+            return xi_hid_report_descriptor;
             break;
     }
     return NULL;
@@ -428,9 +615,15 @@ esp_err_t gcusb_start(usb_mode_t mode)
 
             ESP_ERROR_CHECK(tinyusb_driver_install(&gc_cfg));
             break;
+
+        case USB_MODE_XINPUT:
+            ESP_LOGI(TAG, "XINPUT MODE");
+
+            ESP_ERROR_CHECK(tinyusb_driver_install(&xi_cfg));
+            break;
     }
 
-    adapter_status  = GCSTATUS_WORKING;
+    adapter_status = GCSTATUS_WORKING;
     return ESP_OK;
 }
 
@@ -464,8 +657,8 @@ void gcusb_send_data(bool repeat)
                 ns_input.button_x = gc_poll_response.button_x;
                 ns_input.button_y = gc_poll_response.button_y;
 
-                uint8_t lr = 1 - gc_poll_response.button_dl + gc_poll_response.button_dr;
-                uint8_t ud = 1 - gc_poll_response.button_dd + gc_poll_response.button_du;
+                uint8_t lr = 1 - gc_poll_response.dpad_left + gc_poll_response.dpad_right;
+                uint8_t ud = 1 - gc_poll_response.dpad_down + gc_poll_response.dpad_up;
 
                 ns_input.dpad_hat = dir_to_hat(lr, ud);
 
@@ -530,10 +723,10 @@ void gcusb_send_data(bool repeat)
                 gc_input.button_x   = gc_poll_response.button_x;
                 gc_input.button_y   = gc_poll_response.button_y;
 
-                gc_input.dpad_down  = gc_poll_response.button_dd;
-                gc_input.dpad_up    = gc_poll_response.button_du;
-                gc_input.dpad_left  = gc_poll_response.button_dl;
-                gc_input.dpad_right = gc_poll_response.button_dr;
+                gc_input.dpad_down  = gc_poll_response.dpad_down;
+                gc_input.dpad_up    = gc_poll_response.dpad_up;
+                gc_input.dpad_left  = gc_poll_response.dpad_left;
+                gc_input.dpad_right = gc_poll_response.dpad_right;
 
                 gc_input.button_start   = gc_poll_response.button_start;
                 gc_input.button_z       = gc_poll_response.button_z;
@@ -571,5 +764,68 @@ void gcusb_send_data(bool repeat)
             first = true;
             
             break;
+
+        case USB_MODE_XINPUT:
+            xi_input.report_id = 0x01;
+            if (!repeat)
+            {
+
+                if (gc_poll_response.button_start && gc_poll_response.button_a)
+                {
+                    xi_input.button_start = 1;
+                }
+                else if (gc_poll_response.button_start && gc_poll_response.button_b)
+                {
+                    xi_input.button_back = 1;
+                }
+                else if (gc_poll_response.button_start && gc_poll_response.button_z)
+                {
+                    xi_input.button_guide = 1;
+                }
+                else
+                {
+                    xi_input.button_a = gc_poll_response.button_a;
+                    xi_input.button_b = gc_poll_response.button_b;
+                    xi_input.button_x = gc_poll_response.button_x;
+                    xi_input.button_y = gc_poll_response.button_y;
+                    xi_input.bumper_r = gc_poll_response.button_z;
+
+                    xi_input.button_start   = 0;
+                    xi_input.button_back    = 0;
+                    xi_input.button_guide   = 0;
+                }
+
+                xi_input.dpad_up = gc_poll_response.dpad_up;
+                xi_input.dpad_left = gc_poll_response.dpad_left;
+                xi_input.dpad_down = gc_poll_response.dpad_down;
+                xi_input.dpad_right = gc_poll_response.dpad_right;
+
+                xi_input.trigger_l = gc_poll_response.button_l;
+                xi_input.trigger_r = gc_poll_response.button_r;
+
+                adj_x   = (int) gc_poll_response.stick_x + gc_origin_data.stick_x;
+                adj_y   = 256 - (int) gc_poll_response.stick_y + gc_origin_data.stick_y;
+                adj_cx  = (int) gc_poll_response.cstick_x + gc_origin_data.cstick_x;
+                adj_cy  = 256 - (int) gc_poll_response.cstick_y + gc_origin_data.cstick_y;
+
+                xi_input.stick_left_x   = scale_axis(adj_x);
+                xi_input.stick_left_y   = scale_axis(adj_y);
+                xi_input.stick_right_x  = scale_axis(adj_cx);
+                xi_input.stick_right_y  = scale_axis(adj_cy);
+
+                xi_input.analog_trigger_l = 0x0000;
+                xi_input.analog_trigger_r = 0x0000;
+
+                uint8_t lr = 1 - gc_poll_response.dpad_left + gc_poll_response.dpad_right;
+                uint8_t ud = 1 - gc_poll_response.dpad_down + gc_poll_response.dpad_up;
+                
+            }
+            memcpy(&xi_buffer, &xi_input, XI_HID_LEN);
+            // Send USB report
+            if (usb_clear)
+            {
+                usb_clear = false;
+                tud_hid_report(0, &xi_buffer, XI_HID_LEN);
+            }
     }
 }

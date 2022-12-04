@@ -348,6 +348,12 @@ void app_main(void)
         case USB_MODE_GENERIC:
             rgb_setall(COLOR_BLUE, led_colors);
         break;
+        case USB_MODE_XINPUT:
+            rgb_s xbox_color = {
+                .rgb = 0x107C10,
+            };
+            rgb_setall(xbox_color, led_colors);
+            break;
     }
     
     rgb_show();
