@@ -1,9 +1,16 @@
 {
     "idf.adapterTargetName": "esp32s3",
     "idf.openOcdConfigs": [
-        "interface/ftdi/esp32_devkitj_v1.cfg",
-        "target/esp32s3.cfg"
+        "board/esp32s3-bridge.cfg"
     ],
-    "idf.flashType": "DFU",
-    "idf.portWin": "COM8"
+    "files.associations": {
+        "util_usb.h": "c",
+        "adapter_includes.h": "c",
+        "tinyusb.h": "c",
+        "tusb.h": "c",
+        "osal.h": "c",
+        "osal_freertos.h": "c"
+    },
+    "idf.flashType": "UART",
+    "idf.portWin": "COM14"
 }

@@ -3,8 +3,6 @@
 
 #include "adapter_includes.h"
 
-#define CFG_TUD_VENDOR          1
-
 typedef enum
 {
     USB_MODE_NS,
@@ -22,21 +20,41 @@ typedef enum
 
 typedef enum
 {
-  HAT_TOP          = 0x00,
-  HAT_TOP_RIGHT    = 0x01,
-  HAT_RIGHT        = 0x02,
-  HAT_BOTTOM_RIGHT = 0x03,
-  HAT_BOTTOM       = 0x04,
-  HAT_BOTTOM_LEFT  = 0x05,
-  HAT_LEFT         = 0x06,
-  HAT_TOP_LEFT     = 0x07,
-  HAT_CENTER       = 0x08,
-} input_hat_dir_t;
+  NS_HAT_TOP          = 0x00,
+  NS_HAT_TOP_RIGHT    = 0x01,
+  NS_HAT_RIGHT        = 0x02,
+  NS_HAT_BOTTOM_RIGHT = 0x03,
+  NS_HAT_BOTTOM       = 0x04,
+  NS_HAT_BOTTOM_LEFT  = 0x05,
+  NS_HAT_LEFT         = 0x06,
+  NS_HAT_TOP_LEFT     = 0x07,
+  NS_HAT_CENTER       = 0x08,
+} ns_input_hat_dir_t;
+
+typedef enum
+{
+  XI_HAT_TOP          = 0x01,
+  XI_HAT_TOP_RIGHT    = 0x02,
+  XI_HAT_RIGHT        = 0x03,
+  XI_HAT_BOTTOM_RIGHT = 0x04,
+  XI_HAT_BOTTOM       = 0x05,
+  XI_HAT_BOTTOM_LEFT  = 0x06,
+  XI_HAT_LEFT         = 0x07,
+  XI_HAT_TOP_LEFT     = 0x08,
+  XI_HAT_CENTER       = 0x00,
+} xi_input_hat_dir_t;
+
+
+typedef enum
+{
+    HAT_MODE_NS,
+    HAT_MODE_XI,
+} hat_mode_t;
 
 extern usb_mode_t adapter_mode;
 extern adapter_status_t adapter_status;
 
-uint8_t dir_to_hat(uint8_t leftRight, uint8_t upDown);
+uint8_t dir_to_hat(hat_mode_t hat_type, uint8_t leftRight, uint8_t upDown);
 
 esp_err_t gcusb_start(usb_mode_t mode);
 

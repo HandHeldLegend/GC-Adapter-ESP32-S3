@@ -96,6 +96,8 @@ typedef struct
     int     stick_y;
     int     cstick_x;
     int     cstick_y;
+    int     trigger_l;
+    int     trigger_r;
 } gc_origin_data_s;
 
 typedef enum 

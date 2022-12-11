@@ -54,7 +54,7 @@ typedef struct
   uint8_t analog_trigger_r;
   uint8_t dummy_2;
 
-} ns_input_s;
+} __attribute__ ((packed)) ns_input_s;
 
 extern ns_input_s ns_input;
 //Reuse ns_input_s for generic input
@@ -103,61 +103,69 @@ typedef struct
   uint8_t trigger_l;
   uint8_t trigger_r;
 
-} gc_input_s;
+} __attribute__ ((packed)) gc_input_s;
 
 extern gc_input_s       gc_input;
 extern uint8_t          gc_buffer[GC_HID_LEN];
 
 // xInput mode definitions
 /********************************/
-#define XI_HID_LEN 10
+#define XI_HID_LEN 16
 
 typedef struct
 {
-    uint8_t  report_id;
+    uint8_t report_id : 8;
+
+    uint16_t stick_left_x   : 16;
+    uint16_t stick_left_y   : 16;
+    uint16_t stick_right_x  : 16;
+    uint16_t stick_right_y  : 16;
+
+    uint16_t analog_trigger_l : 16;
+    uint16_t analog_trigger_r : 16;
+
+    uint8_t dpad_hat        : 4;
+    uint8_t dpad_padding    : 4;
 
     union
     {
         struct
         {
-            uint8_t button_a    : 1; // Button 0
-            uint8_t button_b    : 1; // Button 1
-            uint8_t button_x    : 1; // Button 2
-            uint8_t button_y    : 1; // Button 3
-            uint8_t bumper_l    : 1; // Bumper L
-            uint8_t bumper_r    : 1; // Bumper R
-            uint8_t trigger_l   : 1;  //Verified Fixed
-            uint8_t trigger_r   : 1;
+            uint8_t button_a     : 1; 
+            uint8_t button_b   : 1; 
+            uint8_t button_x   : 1; 
+            uint8_t button_y  : 1; 
+            uint8_t bumper_l : 1; 
+            uint8_t bumper_r : 1; 
+            uint8_t button_back   : 1;  
+            uint8_t button_menu  : 1;
         };
-        uint8_t buttons_1;
+        uint8_t buttons_1 : 8;
     };
 
     union
     {
         struct
         {
-            uint8_t button_back     : 1;    // Button back
-            uint8_t button_menu     : 1;    // Button menu
-            uint8_t button_left_stick: 1;   // Button left stick
-            uint8_t button_right_stick: 1;  // Button right stick
-            uint8_t dpad_up     : 1;    // Dpad Up
-            uint8_t dpad_down   : 1;    // Dpad Down
-            uint8_t dpad_left   : 1;    // Dpad Left
-            uint8_t dpad_right  : 1;    // Dpad Right
+            uint8_t button_stick_l        : 1;    
+            uint8_t button_stick_r        : 1;    
+            uint8_t padding    : 6;   
         }; 
-        uint8_t buttons_2;
+        uint8_t buttons_2 : 8;
     };
 
-    uint8_t button_guide;
+} __attribute__ ((packed)) xi_input_s;
 
-    uint8_t stick_left_x;
-    uint8_t stick_left_y;
-    uint8_t stick_right_x;
-    uint8_t stick_right_y;
-    uint8_t analog_trigger_l;
-    uint8_t analog_trigger_r;
-
-} xi_input_s;
+typedef struct
+{
+    uint8_t     report_id;
+    uint16_t    padding_1;
+    uint8_t     magnitude_l;
+    uint8_t     magnitude_r;
+    uint8_t     duration;
+    uint8_t     start_delay;
+    uint8_t     loop_count;
+} __attribute__ ((packed)) xi_rumble_s;
 
 extern xi_input_s       xi_input;
 extern uint8_t          xi_buffer[XI_HID_LEN];

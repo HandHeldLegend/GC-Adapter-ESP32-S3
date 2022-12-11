@@ -95,6 +95,9 @@ void main_gamecube_task(void *parameters)
                             memcpy(JB_TX_MEM, gcmd_origin_rmt, sizeof(rmt_item32_t) * GCMD_ORIGIN_LEN);
                         }
                     }
+
+                    //Delay 300 ms to ensure voltage levels are good on controller.
+                    vTaskDelay(300/portTICK_PERIOD_MS);
                     // Set the memory owner back appropriately.
                     JB_RX_MEMOWNER  = 1;
                     // Set RX to begin so it starts when sync bit is set.
@@ -170,10 +173,14 @@ void main_gamecube_task(void *parameters)
 
                         gc_origin_data.data_set = true;
 
-                        gc_origin_data.stick_x  = 128 - (int) gc_poll_response.stick_x;
-                        gc_origin_data.stick_y  = 128 - (int) gc_poll_response.stick_y;
-                        gc_origin_data.cstick_x = 128 - (int) gc_poll_response.cstick_x;
-                        gc_origin_data.cstick_y = 128 - (int) gc_poll_response.cstick_y;
+                        // Subtract the data we got from 128. This will tell us how off we are from center.
+                        // A negative value is fine.
+                        gc_origin_data.stick_x      = 128 - (int) gc_poll_response.stick_x;
+                        gc_origin_data.stick_y      = 128 - (int) gc_poll_response.stick_y;
+                        gc_origin_data.cstick_x     = 128 - (int) gc_poll_response.cstick_x;
+                        gc_origin_data.cstick_y     = 128 - (int) gc_poll_response.cstick_y;
+                        gc_origin_data.trigger_l    = gc_poll_response.trigger_l;
+                        gc_origin_data.trigger_r    = gc_poll_response.trigger_r;
 
                         memcpy(JB_TX_MEM, gcmd_poll_rmt, sizeof(rmt_item32_t) * GCMD_POLL_LEN);
 

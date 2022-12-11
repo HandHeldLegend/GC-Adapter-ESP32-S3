@@ -7,6 +7,41 @@ adapter_status_t adapter_status = GCSTATUS_IDLE;
 
 #define TUSB_DESC_TOTAL_LEN      (TUD_CONFIG_DESC_LEN + CFG_TUD_HID * TUD_HID_DESC_LEN)
 
+
+/** GENERIC AND NS HID MODES **/
+// 0. String Descriptor
+// 1. Device Descriptor
+// 2. HID Report Descriptor
+// 3. Configuration Descriptor
+// 4. TinyUSB Config
+/**--------------------------**/
+tusb_desc_strarray_device_t hid_string_descriptor = {
+    // array of pointer to string descriptors
+    (char[]){0x09, 0x04},                // 0: is supported language is English (0x0409)
+    "HHL", // 1: Manufacturer
+    "GC Pocket Adapter",      // 2: Product
+    CONFIG_TINYUSB_DESC_SERIAL_STRING,       // 3: Serials, should use chip ID
+};
+
+static const tusb_desc_device_t hid_device_descriptor = {
+    .bLength = 18,
+    .bDescriptorType = TUSB_DESC_DEVICE,
+    .bcdUSB = 0x0200,
+    .bDeviceClass = 0x00,
+    .bDeviceSubClass = 0x00,
+    .bDeviceProtocol = 0x00,
+
+    .bMaxPacketSize0 = 64,
+    .idVendor = 0x20d6,
+    .idProduct = 0xa713,
+
+    .bcdDevice = CONFIG_TINYUSB_DESC_BCD_DEVICE,
+    .iManufacturer = 0x01,
+    .iProduct = 0x02,
+    .iSerialNumber = 0x03,
+    .bNumConfigurations = 0x01
+};
+
 const uint8_t ns_hid_report_descriptor[] = {
     0x05, 0x01,        // Usage Page (Generic Desktop Ctrls)
     0x09, 0x05,        // Usage (Game Pad)
@@ -78,15 +113,14 @@ const uint8_t hid_report_descriptor[] = {
     0x75, 0x01,        //   Report Size (1)
     0x95, 0x0E,        //   Report Count (14)
     0x05, 0x09,        //   Usage Page (Button)
-
     0x19, 0x01,        //   Usage Minimum (0x01)
     0x29, 0x0E,        //   Usage Maximum (0x0E)
     0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    
     0x95, 0x02,        //   Report Count (2)
     0x81, 0x01,        //   Input (Const,Array,Abs,No Wrap,Linear,Preferred State,No Null Position)
 
     0x05, 0x01,        //   Usage Page (Generic Desktop Ctrls)
-
     0x25, 0x07,        //   Logical Maximum (7)
     0x46, 0x3B, 0x01,  //   Physical Maximum (315)
     0x75, 0x04,        //   Report Size (4)
@@ -129,6 +163,69 @@ const uint8_t hid_report_descriptor[] = {
     // 94 bytes
 };
 
+static const uint8_t ns_configuration_descriptor[] = {
+    // Configuration number, interface count, string index, total length, attribute, power in mA
+    TUD_CONFIG_DESCRIPTOR(1, 1, 0, TUSB_DESC_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 500),
+
+    // Interface number, string index, boot protocol, report descriptor len, EP In address, size & polling interval
+    TUD_HID_DESCRIPTOR(0, 0, false, sizeof(ns_hid_report_descriptor), 0x81, 8, 1),
+};
+
+static const uint8_t hid_configuration_descriptor[] = {
+    // Configuration number, interface count, string index, total length, attribute, power in mA
+    TUD_CONFIG_DESCRIPTOR(1, 1, 0, TUSB_DESC_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 500),
+
+    // Interface number, string index, boot protocol, report descriptor len, EP In address, size & polling interval
+    TUD_HID_DESCRIPTOR(0, 0, false, sizeof(hid_report_descriptor), 0x81, 10, 1),
+};
+
+const tinyusb_config_t ns_cfg = {
+    .device_descriptor = &hid_device_descriptor,
+    .string_descriptor = hid_string_descriptor,
+    .external_phy = false,
+    .configuration_descriptor = ns_configuration_descriptor,
+};
+
+const tinyusb_config_t hid_cfg = {
+    .device_descriptor = &hid_device_descriptor,
+    .string_descriptor = hid_string_descriptor,
+    .external_phy = false,
+    .configuration_descriptor = hid_configuration_descriptor,
+};
+
+/**--------------------------**/
+/**--------------------------**/
+
+
+
+/** GAMECUBE HID MODE **/
+// 1. Device Descriptor
+// 2. HID Report Descriptor
+// 3. Configuration Descriptor
+// 4. TinyUSB Config
+/**--------------------------**/
+
+/**** GameCube Adapter Device Descriptor ****/
+static const tusb_desc_device_t gc_descriptor_dev = {
+    .bLength = 18,
+    .bDescriptorType = TUSB_DESC_DEVICE,
+    .bcdUSB = 0x0200,
+    .bDeviceClass = 0x00,
+    .bDeviceSubClass = 0x00,
+    .bDeviceProtocol = 0x00,
+
+    .bMaxPacketSize0 = 64,
+    .idVendor = 0x057E,
+    .idProduct = 0x0337,
+
+    .bcdDevice = CONFIG_TINYUSB_DESC_BCD_DEVICE,
+    .iManufacturer = 0x01,
+    .iProduct = 0x02,
+    .iSerialNumber = 0x03,
+    .bNumConfigurations = 0x01
+};
+
+/**** GameCube Adapter HID Report Descriptor ****/
 const uint8_t gc_hid_report_descriptor[] = {
     0x05, 0x01,        // Usage Page (Generic Desktop Ctrls)
     0x09, 0x05,        // Usage (Game Pad)
@@ -185,168 +282,7 @@ const uint8_t gc_hid_report_descriptor[] = {
     0xC0,              // End Collection
 };
 
-const uint8_t xi_hid_report_descriptor[] = {
-    0x05, 0x01,        // Usage Page (Generic Desktop Ctrls)
-    0x09, 0x05,        // Usage (Game Pad)
-    0xA1, 0x01,        // Collection (Application)
-
-    
-    0x85, 0x01,        //   Report ID (1)
-    0x05, 0x09,        //   Usage Page (Button)
-    0x19, 0x01,        //   Usage Minimum (0x01)
-    0x29, 0x18,        //   Usage Maximum (0x18)
-    0x15, 0x00,        //   Logical Minimum (0)
-    0x25, 0x01,        //   Logical Maximum (1)
-    0x35, 0x00,        //   Physical Minimum (0)
-    0x45, 0x01,        //   Physical Maximum (1)
-    0x75, 0x01,        //   Report Size (1)
-    0x95, 0x18,        //   Report Count (24)
-    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-    0x05, 0x01,        //   Usage Page (Generic Desktop Ctrls)
-    0x26, 0xFF, 0x00,  //   Logical Maximum (255)
-    0x46, 0xFF, 0x00,  //   Physical Maximum (255)
-    0x09, 0x30,        //   Usage (X)
-    0x09, 0x31,        //   Usage (Y)
-    0x09, 0x32,        //   Usage (Z)
-    0x09, 0x33,        //   Usage (Rx)
-    0x75, 0x08,        //   Report Size (8)
-    0x95, 0x04,        //   Report Count (4)
-    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-    0x05, 0x02,        //   Usage Page (Sim Ctrls)
-    0x15, 0x00,        //   Logical Minimum (0)
-    0x26, 0xFF, 0x00,  //   Logical Maximum (255)
-    0x09, 0xC4,        //   Usage (Accelerator)
-    0x09, 0xC5,        //   Usage (Brake)
-    0x75, 0x08,        //   Report Size (8)
-    0x95, 0x02,        //   Report Count (2)
-    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-    0x05, 0x0C,        //   Usage Page (Consumer)
-    0x0A, 0x23, 0x02,  //   Usage (AC Home)
-    0x75, 0x01,        //   Report Size (1)
-    0x95, 0x01,        //   Report Count (1)
-    0x15, 0x00,        //   Logical Minimum (0)
-    0x25, 0x01,        //   Logical Maximum (1)
-    0x35, 0x00,        //   Physical Minimum (0)
-    0x45, 0x01,        //   Physical Maximum (1)
-    0x81, 0x42,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,Null State)
-    0x75, 0x07,        //   Report Size (7)
-    0x95, 0x01,        //   Report Count (1)
-    0x81, 0x03,        //   Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-
-    // End of Input part
-
-    // RUMBLE REPORTS
-    0x05, 0x0F,        //   Usage Page (PID Page)
-    0x09, 0x21,        //   Usage (0x21)
-
-    // Byte 1 report ID
-    0x85, 0x03,        //   Report ID (3)
-
-    // Byte 2 function
-    // 0x0F = Enable Actuators
-    0xA1, 0x02,        //   Collection (Logical)
-    0x09, 0x97,        //     Usage (0x97)
-    0x15, 0x00,        //     Logical Minimum (0)
-    0x25, 0x01,        //     Logical Maximum (1)
-    0x75, 0x04,        //     Report Size (4)
-    0x95, 0x01,        //     Report Count (1)
-    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
-
-    0x15, 0x00,        //     Logical Minimum (0)
-    0x25, 0x00,        //     Logical Maximum (0)
-    0x75, 0x04,        //     Report Size (4)
-    0x95, 0x01,        //     Report Count (1)
-    0x91, 0x03,        //     Output (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
-
-    0x09, 0x70,        //     Usage (0x70)
-    0x15, 0x00,        //     Logical Minimum (0)
-    0x25, 0x64,        //     Logical Maximum (100)
-    0x75, 0x08,        //     Report Size (8)
-    0x95, 0x04,        //     Report Count (4)
-    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
-    0x09, 0x50,        //     Usage (0x50)
-    0x66, 0x01, 0x10,  //     Unit (System: SI Linear, Time: Seconds)
-    0x55, 0x0E,        //     Unit Exponent (-2)
-    0x15, 0x00,        //     Logical Minimum (0)
-    0x26, 0xFF, 0x00,  //     Logical Maximum (255)
-    0x75, 0x08,        //     Report Size (8)
-    0x95, 0x01,        //     Report Count (1)
-    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
-    
-    0x09, 0xA7,        //     Usage (0xA7)
-    0x15, 0x00,        //     Logical Minimum (0)
-    0x26, 0xFF, 0x00,  //     Logical Maximum (255)
-    0x75, 0x08,        //     Report Size (8)
-    0x95, 0x01,        //     Report Count (1)
-    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
-    0x65, 0x00,        //     Unit (None)
-    0x55, 0x00,        //     Unit Exponent (0)
-
-    0x09, 0x7C,        //     Usage (0x7C)
-    0x15, 0x00,        //     Logical Minimum (0)
-    0x26, 0xFF, 0x00,  //     Logical Maximum (255)
-    0x75, 0x08,        //     Report Size (8)
-    0x95, 0x01,        //     Report Count (1)
-    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
-    0xC0,              //   End Collection
-
-    // Battery level output
-
-    0x85, 0x04,        //   Report ID (4)
-    0x05, 0x06,        //   Usage Page (Generic Dev Ctrls)
-    0x09, 0x20,        //   Usage (Battery Strength)
-    0x15, 0x00,        //   Logical Minimum (0)
-    0x26, 0xFF, 0x00,  //   Logical Maximum (255)
-    0x75, 0x08,        //   Report Size (8)
-    0x95, 0x01,        //   Report Count (1)
-    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-    0xC0,              // End Collection
-
-    // 306 bytes
-};
-
-/**** GameCube Adapter Device Descriptor ****/
-static const tusb_desc_device_t gc_descriptor_dev = {
-    .bLength = 18,
-    .bDescriptorType = TUSB_DESC_DEVICE,
-    .bcdUSB = 0x0200,
-    .bDeviceClass = 0x00,
-    .bDeviceSubClass = 0x00,
-    .bDeviceProtocol = 0x00,
-
-    .bMaxPacketSize0 = 64,
-    .idVendor = 0x057E,
-    .idProduct = 0x0337,
-
-    .bcdDevice = CONFIG_TINYUSB_DESC_BCD_DEVICE,
-    .iManufacturer = 0x01,
-    .iProduct = 0x02,
-    .iSerialNumber = 0x03,
-    .bNumConfigurations = 0x01
-};
-
-/**** xInput Device Descriptor ****/
-static const tusb_desc_device_t xi_descriptor_dev = {
-    .bLength = 18,
-    .bDescriptorType = TUSB_DESC_DEVICE,
-    .bcdUSB = 0x0200,
-    .bDeviceClass = 0xFF,
-    .bDeviceSubClass = 0xFF,
-    .bDeviceProtocol = 0xFF,
-
-    .bMaxPacketSize0 = 64,
-    .idVendor = 0x045E,
-    .idProduct = 0x02E0,
-
-    .bcdDevice = 0x0114,
-    .iManufacturer = 0x01,
-    .iProduct = 0x02,
-    .iSerialNumber = 0x03,
-    .bNumConfigurations = 0x01
-};
-
 /**** GameCube Adapter Configuration Descriptor ****/
-
 #define GC_CGCDES_LEN   9 + 9 + 9 + 7 + 7
 static const uint8_t gc_hid_configuration_descriptor[] = {
     // Configuration number, interface count, string index, total length, attribute, power in mA
@@ -361,58 +297,243 @@ static const uint8_t gc_hid_configuration_descriptor[] = {
     7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(6), 8,
 };  
 
+/**** GameCube Adapter TinyUSB Config ****/
 static const tinyusb_config_t gc_cfg = {
-                .device_descriptor = &gc_descriptor_dev,
-                .string_descriptor = NULL,
-                .external_phy = false,
-                .configuration_descriptor = gc_hid_configuration_descriptor,
-            };
+    .device_descriptor          = &gc_descriptor_dev,
+    .string_descriptor          = hid_string_descriptor,
+    .external_phy               = false,
+    .configuration_descriptor   = gc_hid_configuration_descriptor,
+};
+
+/**--------------------------**/
+/**--------------------------**/
+
+
+/** XBOX HID MODE (NOT QUITE XINPUT) **/
+// 1. Device Descriptor
+// 2. HID Report Descriptor
+// 3. Configuration Descriptor
+// 4. TinyUSB Config
+/**--------------------------**/
+
+/**** xInput Device Descriptor ****/
+static const tusb_desc_device_t xi_device_descriptor = {
+    .bLength = 18,
+    .bDescriptorType = TUSB_DESC_DEVICE,
+    .bcdUSB = 0x0200,
+    .bDeviceClass = TUSB_CLASS_HID,
+    .bDeviceSubClass = 0xFF,
+    .bDeviceProtocol = 0xFF,
+
+    .bMaxPacketSize0 = 64,
+    .idVendor = 0x045E,
+    .idProduct = 0xB13,
+
+    .bcdDevice = 0x0572,
+    .iManufacturer = 0x01,
+    .iProduct = 0x02,
+    .iSerialNumber = 0x03,
+    .bNumConfigurations = 0x01
+};
+
+// XInput HID Descriptor
+const uint8_t xinput_hid_report_descriptor[] = {
+    0x05, 0x01,        // Usage Page (Generic Desktop Ctrls)
+    0x09, 0x05,        // Usage (Game Pad)
+    0xA1, 0x01,        // Collection (Application)
+
+    // Byte 0
+    0x85, 0x01,        //   Report ID (1)
+
+    // Bytes 1, 2, 3, 4 for left stick X and Y
+    0x09, 0x01,        //   Usage (Pointer)
+    0xA1, 0x00,        //   Collection (Physical)
+    0x09, 0x30,        //     Usage (X)
+    0x09, 0x31,        //     Usage (Y)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x27, 0xFF, 0xFF, 0x00, 0x00,  //     Logical Maximum (65534)
+    0x95, 0x02,        //     Report Count (2)
+    0x75, 0x10,        //     Report Size (16)
+    0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0xC0,              //   End Collection
+
+    // Bytes 4, 5, 6, 7 for right stick X and Y
+    0x09, 0x01,        //   Usage (Pointer)
+    0xA1, 0x00,        //   Collection (Physical)
+    0x09, 0x33,        //     Usage (Rx)
+    0x09, 0x34,        //     Usage (Ry)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x27, 0xFF, 0xFF, 0x00, 0x00,  //     Logical Maximum (65534)
+    0x95, 0x02,        //     Report Count (2)
+    0x75, 0x10,        //     Report Size (16)
+    0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0xC0,              //   End Collection
+
+    // Bytes 8, 9 for left analog trigger
+    0x05, 0x01,        //   Usage Page (Generic Desktop Ctrls)
+    0x09, 0x32,        //   Usage (Z)
+    0x15, 0x00,        //   Logical Minimum (0)
+    0x26, 0xFF, 0x03,  //   Logical Maximum (1023)
+    0x95, 0x01,        //   Report Count (1)
+    0x75, 0x0A,        //   Report Size (10)
+    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0x15, 0x00,        //   Logical Minimum (0)
+    0x25, 0x00,        //   Logical Maximum (0)
+    0x75, 0x06,        //   Report Size (6)
+    0x95, 0x01,        //   Report Count (1)
+    0x81, 0x03,        //   Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+
+    // Bytes 10, 11 for right analog trigger
+    0x05, 0x01,        //   Usage Page (Generic Desktop Ctrls)
+    0x09, 0x35,        //   Usage (Rz)
+    0x15, 0x00,        //   Logical Minimum (0)
+    0x26, 0xFF, 0x03,  //   Logical Maximum (1023)
+    0x95, 0x01,        //   Report Count (1)
+    0x75, 0x0A,        //   Report Size (10)
+    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0x15, 0x00,        //   Logical Minimum (0)
+    0x25, 0x00,        //   Logical Maximum (0)
+    0x75, 0x06,        //   Report Size (6)
+    0x95, 0x01,        //   Report Count (1)
+    0x81, 0x03,        //   Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+
+    // Byte 12 for Hat switch for dpad 
+    0x05, 0x01,        //   Usage Page (Generic Desktop Ctrls)
+    0x09, 0x39,        //   Usage (Hat switch)
+    0x15, 0x01,        //   Logical Minimum (1)
+    0x25, 0x08,        //   Logical Maximum (8)
+    0x35, 0x00,        //   Physical Minimum (0)
+    0x46, 0x3B, 0x01,  //   Physical Maximum (315)
+    0x66, 0x14, 0x00,  //   Unit (System: English Rotation, Length: Centimeter)
+    0x75, 0x04,        //   Report Size (4)
+    0x95, 0x01,        //   Report Count (1)
+    0x81, 0x03,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,Null State)
+    0x75, 0x04,        //   Report Size (4)
+    0x95, 0x01,        //   Report Count (1)
+    0x15, 0x00,        //   Logical Minimum (0)
+    0x25, 0x00,        //   Logical Maximum (0)
+    0x35, 0x00,        //   Physical Minimum (0)
+    0x45, 0x00,        //   Physical Maximum (0)
+    0x65, 0x00,        //   Unit (None)
+    0x81, 0x03,        //   Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+
+    // Bytes 13 and 14 for buttons_1
+    0x05, 0x09,        //   Usage Page (Button)
+    0x19, 0x01,        //   Usage Minimum (0x01)
+    0x29, 0x0A,        //   Usage Maximum (0x0A)
+    0x15, 0x00,        //   Logical Minimum (0)
+    0x25, 0x01,        //   Logical Maximum (1)
+    0x75, 0x01,        //   Report Size (1)
+    0x95, 0x0A,        //   Report Count (10)
+    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0x15, 0x00,        //   Logical Minimum (0)
+    0x25, 0x00,        //   Logical Maximum (0)
+    0x75, 0x06,        //   Report Size (6)
+    0x95, 0x01,        //   Report Count (1)
+    0x81, 0x03,        //   Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+
+    0x05, 0x01,        //   Usage Page (Generic Desktop Ctrls)
+    0x09, 0x80,        //   Usage (Sys Control)
+    0x85, 0x02,        //   Report ID (2)
+    0xA1, 0x00,        //   Collection (Physical)
+    0x09, 0x85,        //     Usage (Sys Main Menu)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x25, 0x01,        //     Logical Maximum (1)
+    0x95, 0x01,        //     Report Count (1)
+    0x75, 0x01,        //     Report Size (1)
+    0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x25, 0x00,        //     Logical Maximum (0)
+    0x75, 0x07,        //     Report Size (7)
+    0x95, 0x01,        //     Report Count (1)
+    0x81, 0x03,        //     Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0xC0,              //   End Collection
+
+    0x05, 0x0F,        //   Usage Page (PID Page)
+    0x09, 0x21,        //   Usage (0x21)
+
+    0x85, 0x03,        //   Report ID (3)
+
+    0xA1, 0x02,        //   Collection (Logical)
+    0x09, 0x97,        //     Usage (0x97)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x25, 0x01,        //     Logical Maximum (1)
+    0x75, 0x04,        //     Report Size (4)
+    0x95, 0x01,        //     Report Count (1)
+    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x25, 0x00,        //     Logical Maximum (0)
+    0x75, 0x04,        //     Report Size (4)
+    0x95, 0x01,        //     Report Count (1)
+    0x91, 0x03,        //     Output (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0x09, 0x70,        //     Usage (0x70)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x25, 0x64,        //     Logical Maximum (100)
+    0x75, 0x08,        //     Report Size (8)
+    0x95, 0x04,        //     Report Count (4)
+    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0x09, 0x50,        //     Usage (0x50)
+    0x66, 0x01, 0x10,  //     Unit (System: SI Linear, Time: Seconds)
+    0x55, 0x0E,        //     Unit Exponent (-2)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x26, 0xFF, 0x00,  //     Logical Maximum (255)
+    0x75, 0x08,        //     Report Size (8)
+    0x95, 0x01,        //     Report Count (1)
+    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0x09, 0xA7,        //     Usage (0xA7)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x26, 0xFF, 0x00,  //     Logical Maximum (255)
+    0x75, 0x08,        //     Report Size (8)
+    0x95, 0x01,        //     Report Count (1)
+    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0x65, 0x00,        //     Unit (None)
+    0x55, 0x00,        //     Unit Exponent (0)
+    0x09, 0x7C,        //     Usage (0x7C)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x26, 0xFF, 0x00,  //     Logical Maximum (255)
+    0x75, 0x08,        //     Report Size (8)
+    0x95, 0x01,        //     Report Count (1)
+    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xC0,              //   End Collection
+    0x85, 0x04,        //   Report ID (4)
+    0x05, 0x06,        //   Usage Page (Generic Dev Ctrls)
+    0x09, 0x20,        //   Usage (Battery Strength)
+    0x15, 0x00,        //   Logical Minimum (0)
+    0x26, 0xFF, 0x00,  //   Logical Maximum (255)
+    0x75, 0x08,        //   Report Size (8)
+    0x95, 0x01,        //   Report Count (1)
+    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0xC0,              // End Collection
+    // 306 bytes
+};
 
 /**** xInput Configuration Descriptor ****/
 #define XI_CGCDES_LEN   9 + 9 + 9 + 7 + 7
-static const uint8_t xinput_configuration_descriptor[] = {
+static const uint8_t xi_configuration_descriptor[] = {
     // Configuration number, interface count, string index, total length, attribute, power in mA
     TUD_CONFIG_DESCRIPTOR(1, 1, 0, 41, TUSB_DESC_CONFIG_ATT_SELF_POWERED, 500),
     // Interface
     9, TUSB_DESC_INTERFACE, 0x00, 0x00, 0x02, TUSB_CLASS_HID, 0x00, 0x00, 0x00,
     // HID Descriptor
-    9, HID_DESC_TYPE_HID, U16_TO_U8S_LE(0x0110), 0, 1, HID_DESC_TYPE_REPORT, U16_TO_U8S_LE(sizeof(xi_hid_report_descriptor)),
+    9, HID_DESC_TYPE_HID, U16_TO_U8S_LE(0x0110), 0, 1, HID_DESC_TYPE_REPORT, U16_TO_U8S_LE(sizeof(xinput_hid_report_descriptor)),
     // Endpoint Descriptor
-    7, TUSB_DESC_ENDPOINT, 0x81, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(38), 1,
+    7, TUSB_DESC_ENDPOINT, 0x81, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(32), 4,
     // Endpoint Descriptor
-    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(6), 8,
-};
-
-tusb_desc_strarray_device_t xi_descriptor_str = {
-    // array of pointer to string descriptors
-    (char[]){0x09, 0x04},                // 0: is supported language is English (0x0409)
-    "Microsoft", // 1: Manufacturer
-    "Xbox 360 Controller",      // 2: Product
-    CONFIG_TINYUSB_DESC_SERIAL_STRING,       // 3: Serials, should use chip ID
+    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(33), 4,
 };
 
 static const tinyusb_config_t xi_cfg = {
-                .device_descriptor = &xi_descriptor_dev,
-                .string_descriptor = &xi_descriptor_str,
-                .external_phy = false,
-                .configuration_descriptor = xinput_configuration_descriptor,
+    .device_descriptor          = &xi_device_descriptor,
+    .string_descriptor          = hid_string_descriptor,
+    .external_phy               = false,
+    .configuration_descriptor   = xi_configuration_descriptor,
 };
 
-static const uint8_t ns_hid_configuration_descriptor[] = {
-    // Configuration number, interface count, string index, total length, attribute, power in mA
-    TUD_CONFIG_DESCRIPTOR(1, 1, 0, TUSB_DESC_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 500),
+/**--------------------------**/
+/**--------------------------**/
 
-    // Interface number, string index, boot protocol, report descriptor len, EP In address, size & polling interval
-    TUD_HID_DESCRIPTOR(0, 0, false, sizeof(ns_hid_report_descriptor), 0x81, 8, 1),
-};
 
-static const uint8_t hid_configuration_descriptor[] = {
-    // Configuration number, interface count, string index, total length, attribute, power in mA
-    TUD_CONFIG_DESCRIPTOR(1, 1, 0, TUSB_DESC_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 500),
 
-    // Interface number, string index, boot protocol, report descriptor len, EP In address, size & polling interval
-    TUD_HID_DESCRIPTOR(0, 0, false, sizeof(hid_report_descriptor), 0x81, 10, 1),
-};
 
 /********* TinyUSB HID callbacks ***************/
 // Invoked when received GET_REPORT control request
@@ -429,6 +550,7 @@ uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_t
 
 bool first = false;
 bool usb_clear = true;
+
 void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint8_t len)
 {   
     switch (adapter_mode)
@@ -437,7 +559,9 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint8_t
         case USB_MODE_NS:
         case USB_MODE_GENERIC:
         case USB_MODE_XINPUT:
+
             usb_clear = true;
+
             break;
         case USB_MODE_GC:
             if (report[0] == 0x21)
@@ -468,9 +592,24 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_
                 }
             }
             break;
-        /*case USB_MODE_GENERIC:
-            //return generic_hid_report_descriptor;
-            break;*/
+        case USB_MODE_XINPUT:
+            if (!report_id && !report_type)
+            {
+                if (buffer[0] == 0x03 && buffer[1] == 0x0F)
+                {
+                    xi_rumble_s rumble = {};
+                    memcpy(&rumble, buffer, sizeof(xi_rumble_s));
+                    if (rumble.magnitude_l > 0 || rumble.magnitude_r > 0)
+                    {
+                        rx_vibrate = 1;
+                    }
+                    else
+                    {
+                        rx_vibrate = 0;
+                    }
+                }
+            }
+            break;
     }  
 }
 
@@ -482,6 +621,9 @@ uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance)
     switch (adapter_mode)
     {
         default:
+        case USB_MODE_XINPUT:
+            return xinput_hid_report_descriptor;
+            break;
         case USB_MODE_NS:
             return ns_hid_report_descriptor;
             break;
@@ -491,52 +633,103 @@ uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance)
         case USB_MODE_GENERIC:
             return hid_report_descriptor;
             break;
-        case USB_MODE_XINPUT:
-            return xi_hid_report_descriptor;
-            break;
     }
     return NULL;
 }
 
-uint8_t dir_to_hat(uint8_t leftRight, uint8_t upDown)
+/**
+ * @brief Takes in directions and outputs a byte output appropriate for
+ * HID Hat usage.
+ * @param hat_type hat_mode_t type - The type of controller you're converting for.
+ * @param leftRight 0 through 2 (2 is right) to indicate the direction left/right
+ * @param upDown 0 through 2 (2 is up) to indicate the direction up/down
+*/
+uint8_t dir_to_hat(hat_mode_t hat_type, uint8_t leftRight, uint8_t upDown)
 {
-    uint8_t ret = HAT_CENTER;
-
-    if (leftRight == 2)
+    uint8_t ret = 0;
+    switch(hat_type)
     {
-        ret = HAT_RIGHT;
-        if (upDown == 2)
+        default:
+        case HAT_MODE_NS:
+            ret = NS_HAT_CENTER;
+
+        if (leftRight == 2)
         {
-            ret = HAT_TOP_RIGHT;
+            ret = NS_HAT_RIGHT;
+            if (upDown == 2)
+            {
+                ret = NS_HAT_TOP_RIGHT;
+            }
+            else if (upDown == 0)
+            {
+                ret = NS_HAT_BOTTOM_RIGHT;
+            }
+        }
+        else if (leftRight == 0)
+        {
+            ret = NS_HAT_LEFT;
+            if (upDown == 2)
+            {
+                ret = NS_HAT_TOP_LEFT;
+            }
+            else if (upDown == 0)
+            {
+                ret = NS_HAT_BOTTOM_LEFT;
+            }
+        }
+
+        else if (upDown == 2)
+        {
+            ret = NS_HAT_TOP;
         }
         else if (upDown == 0)
         {
-            ret = HAT_BOTTOM_RIGHT;
+            ret = NS_HAT_BOTTOM;
         }
-    }
-    else if (leftRight == 0)
-    {
-        ret = HAT_LEFT;
-        if (upDown == 2)
-        {
-            ret = HAT_TOP_LEFT;
-        }
-        else if (upDown == 0)
-        {
-            ret = HAT_BOTTOM_LEFT;
-        }
-    }
 
-    else if (upDown == 2)
-    {
-        ret = HAT_TOP;
-    }
-    else if (upDown == 0)
-    {
-        ret = HAT_BOTTOM;
-    }
+        return ret;
+        break;
 
-    return ret;
+        case HAT_MODE_XI:
+                ret = XI_HAT_CENTER;
+
+            if (leftRight == 2)
+            {
+                ret = XI_HAT_RIGHT;
+                if (upDown == 2)
+                {
+                    ret = XI_HAT_TOP_RIGHT;
+                }
+                else if (upDown == 0)
+                {
+                    ret = XI_HAT_BOTTOM_RIGHT;
+                }
+            }
+            else if (leftRight == 0)
+            {
+                ret = XI_HAT_LEFT;
+                if (upDown == 2)
+                {
+                    ret = XI_HAT_TOP_LEFT;
+                }
+                else if (upDown == 0)
+                {
+                    ret = XI_HAT_BOTTOM_LEFT;
+                }
+            }
+
+            else if (upDown == 2)
+            {
+                ret = XI_HAT_TOP;
+            }
+            else if (upDown == 0)
+            {
+                ret = XI_HAT_BOTTOM;
+            }
+
+            return ret;
+            break;
+    }
 }
 
 #define ANALOG_SCALER (float) 1.28
@@ -567,6 +760,22 @@ uint8_t scale_axis(int input)
     return (uint8_t) res;
 }
 
+uint8_t scale_trigger(int input)
+{
+    if (input < 0)
+    {
+        return (uint8_t) 0;
+    }
+    else if ( input <= 255)
+    {
+        return (uint8_t) input;
+    }
+    else
+    {
+        return (uint8_t) 255;
+    }
+}
+
 esp_err_t gcusb_start(usb_mode_t mode)
 {
     const char* TAG = "gcusb_start";
@@ -579,25 +788,11 @@ esp_err_t gcusb_start(usb_mode_t mode)
         case USB_MODE_NS:
             ESP_LOGI(TAG, "NS MODE");
 
-            const tinyusb_config_t ns_cfg = {
-                .device_descriptor = NULL,
-                .string_descriptor = NULL,
-                .external_phy = false,
-                .configuration_descriptor = ns_hid_configuration_descriptor,
-            };
-
             ESP_ERROR_CHECK(tinyusb_driver_install(&ns_cfg));
             break;
         case USB_MODE_GENERIC:
             ESP_LOGI(TAG, "HID MODE");
             
-            const tinyusb_config_t hid_cfg = {
-                .device_descriptor = NULL,
-                .string_descriptor = NULL,
-                .external_phy = false,
-                .configuration_descriptor = hid_configuration_descriptor,
-            };
-
             ESP_ERROR_CHECK(tinyusb_driver_install(&hid_cfg));
             break;
         case USB_MODE_GC:
@@ -626,6 +821,8 @@ int adj_x;
 int adj_y;
 int adj_cx;
 int adj_cy;
+int adj_tl;
+int adj_tr;
 
 void gcusb_send_data(bool repeat)
 {
@@ -650,7 +847,7 @@ void gcusb_send_data(bool repeat)
                 uint8_t lr = 1 - gc_poll_response.dpad_left + gc_poll_response.dpad_right;
                 uint8_t ud = 1 - gc_poll_response.dpad_down + gc_poll_response.dpad_up;
 
-                ns_input.dpad_hat = dir_to_hat(lr, ud);
+                ns_input.dpad_hat = dir_to_hat(HAT_MODE_NS, lr, ud);
 
                 ns_input.button_plus = gc_poll_response.button_start;
 
@@ -663,6 +860,8 @@ void gcusb_send_data(bool repeat)
                 adj_y   = 256 - (int) gc_poll_response.stick_y + gc_origin_data.stick_y;
                 adj_cx  = (int) gc_poll_response.cstick_x + gc_origin_data.cstick_x;
                 adj_cy  = 256 - (int) gc_poll_response.cstick_y + gc_origin_data.cstick_y;
+                adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
+                adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
 
                 ns_input.stick_left_x   = scale_axis(adj_x);
                 ns_input.stick_left_y   = scale_axis(adj_y);
@@ -671,8 +870,8 @@ void gcusb_send_data(bool repeat)
 
                 if (adapter_mode == USB_MODE_GENERIC)
                 {
-                    ns_input.analog_trigger_l  = gc_poll_response.trigger_l;
-                    ns_input.analog_trigger_r  = gc_poll_response.trigger_r;
+                    ns_input.analog_trigger_l  = scale_trigger(adj_tl);
+                    ns_input.analog_trigger_r  = scale_trigger(adj_tr);
                 }
                 else
                 {
@@ -723,18 +922,19 @@ void gcusb_send_data(bool repeat)
                 gc_input.button_r       = gc_poll_response.button_r;
                 gc_input.button_l       = gc_poll_response.button_l;
 
-                gc_input.trigger_l      = gc_poll_response.trigger_l;
-                gc_input.trigger_r      = gc_poll_response.trigger_r;
-
                 adj_x   = (int) gc_poll_response.stick_x + gc_origin_data.stick_x;
                 adj_y   = (int) gc_poll_response.stick_y + gc_origin_data.stick_y;
                 adj_cx  = (int) gc_poll_response.cstick_x + gc_origin_data.cstick_x;
                 adj_cy  = (int) gc_poll_response.cstick_y + gc_origin_data.cstick_y;
+                adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
+                adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
 
-                gc_input.stick_x    = (uint8_t) adj_x;
-                gc_input.stick_y    = (uint8_t) adj_y;
-                gc_input.cstick_x   = (uint8_t) adj_cx;
-                gc_input.cstick_y   = (uint8_t) adj_cy;
+                gc_input.stick_x        = (uint8_t) adj_x;
+                gc_input.stick_y        = (uint8_t) adj_y;
+                gc_input.cstick_x       = (uint8_t) adj_cx;
+                gc_input.cstick_y       = (uint8_t) adj_cy;
+                gc_input.trigger_l      = scale_trigger(adj_tl);
+                gc_input.trigger_r      = scale_trigger(adj_tr);
             }
 
             if (first)
@@ -768,50 +968,56 @@ void gcusb_send_data(bool repeat)
                 {
                     xi_input.button_back = 1;
                 }
-                else if (gc_poll_response.button_start && gc_poll_response.button_z)
-                {
-                    xi_input.button_guide = 1;
-                }
                 else
                 {
                     xi_input.button_a = gc_poll_response.button_a;
                     xi_input.button_b = gc_poll_response.button_b;
                     xi_input.button_x = gc_poll_response.button_x;
                     xi_input.button_y = gc_poll_response.button_y;
-                    xi_input.bumper_r = gc_poll_response.button_z;
+                    if (gc_poll_response.button_start && gc_poll_response.button_z)
+                    {
+                        xi_input.bumper_l = 1;
+                    }
+                    else
+                    {
+                        xi_input.bumper_r = gc_poll_response.button_z;
+                        xi_input.bumper_l = 0;
+                    }
+                    
 
                     xi_input.button_menu   = 0;
                     xi_input.button_back    = 0;
-                    xi_input.button_guide   = 0;
                 }
-
-                xi_input.dpad_up = gc_poll_response.dpad_up;
-                xi_input.dpad_left = gc_poll_response.dpad_left;
-                xi_input.dpad_down = gc_poll_response.dpad_down;
-                xi_input.dpad_right = gc_poll_response.dpad_right;
-
-                xi_input.trigger_l = gc_poll_response.button_l;
-                xi_input.trigger_r = gc_poll_response.button_r;
 
                 adj_x   = (int) gc_poll_response.stick_x + gc_origin_data.stick_x;
                 adj_y   = 256 - (int) gc_poll_response.stick_y + gc_origin_data.stick_y;
                 adj_cx  = (int) gc_poll_response.cstick_x + gc_origin_data.cstick_x;
                 adj_cy  = 256 - (int) gc_poll_response.cstick_y + gc_origin_data.cstick_y;
+                adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
+                adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
 
-                xi_input.stick_left_x   = scale_axis(adj_x);
-                xi_input.stick_left_y   = scale_axis(adj_y);
-                xi_input.stick_right_x  = scale_axis(adj_cx);
-                xi_input.stick_right_y  = scale_axis(adj_cy);
+                xi_input.stick_left_x   = (uint16_t) scale_axis(adj_x)  << 8;
+                xi_input.stick_left_y   = (uint16_t) scale_axis(adj_y)  << 8;
+                xi_input.stick_right_x  = (uint16_t) scale_axis(adj_cx) << 8;
+                xi_input.stick_right_y  = (uint16_t) scale_axis(adj_cy) << 8;
 
-                xi_input.analog_trigger_l = gc_poll_response.trigger_l;
-                xi_input.analog_trigger_r = gc_poll_response.trigger_r;
+                xi_input.analog_trigger_l = (uint16_t) scale_trigger(adj_tl)<<2;
+                xi_input.analog_trigger_r = (uint16_t) scale_trigger(adj_tr)<<2;
+
+                uint8_t lr = 1 - gc_poll_response.dpad_left + gc_poll_response.dpad_right;
+                uint8_t ud = 1 - gc_poll_response.dpad_down + gc_poll_response.dpad_up;
+
+                xi_input.dpad_hat = dir_to_hat(HAT_MODE_XI, lr, ud);
             }
-            memcpy(&xi_buffer, &xi_input, XI_HID_LEN);
-            // Send USB report
+            
             if (usb_clear)
             {
+                memcpy(xi_buffer, &xi_input, sizeof(xi_input_s));
                 usb_clear = false;
-                tud_hid_report(0, &xi_buffer, XI_HID_LEN);
+                tud_hid_report(0, xi_buffer, XI_HID_LEN);
             }
+            
+            break;
+
     }
 }

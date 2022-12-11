@@ -30,3 +30,6 @@ Byte 12 is dpad hat
 Bytes 13/14 are buttons
 13 - buttons
 14 - buttons
+
+Old stuff not working :)
+// Generic Gamepad HID descriptor
