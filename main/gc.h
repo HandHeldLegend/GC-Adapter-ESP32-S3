@@ -85,7 +85,7 @@ typedef struct
     uint8_t cstick_y;
     uint8_t trigger_l;
     uint8_t trigger_r;
-} gc_poll_response_s;
+} __attribute__ ((packed)) gc_poll_response_s;
 
 extern gc_poll_response_s   gc_poll_response;
 

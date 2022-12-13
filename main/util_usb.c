@@ -736,24 +736,24 @@ uint8_t dir_to_hat(hat_mode_t hat_type, uint8_t leftRight, uint8_t upDown)
 uint8_t scale_axis(int input)
 {
     int res = input;
-    if (input > 130)
+    if (input > 129)
     {
         float tmp = (float) input - 128;
         tmp = tmp * ANALOG_SCALER;
         res = (int) tmp + 128;
     }
-    else if (input < 126)
+    else if (input < 127)
     {
         float tmp = 128 - (float) input;
         tmp = tmp * ANALOG_SCALER;
         res = 128 - (int) tmp;    
     }
     
-    if (res > 255)
+    if (res >= 255)
     {
         res = 255;
     }
-    if (res < 0)
+    if (res <= 0)
     {
         res = 0;
     }
@@ -856,10 +856,10 @@ void gcusb_send_data(bool repeat)
                 ns_input.trigger_zl = gc_poll_response.button_l;
                 ns_input.trigger_zr = gc_poll_response.button_r;
                 
-                adj_x   = (int) gc_poll_response.stick_x + gc_origin_data.stick_x;
-                adj_y   = 256 - (int) gc_poll_response.stick_y + gc_origin_data.stick_y;
-                adj_cx  = (int) gc_poll_response.cstick_x + gc_origin_data.cstick_x;
-                adj_cy  = 256 - (int) gc_poll_response.cstick_y + gc_origin_data.cstick_y;
+                adj_x   = (int) gc_poll_response.stick_x - gc_origin_data.stick_x;
+                adj_y   = 256 - ( (int) gc_poll_response.stick_y - gc_origin_data.stick_y );
+                adj_cx  = (int) gc_poll_response.cstick_x - gc_origin_data.cstick_x;
+                adj_cy  = 256 - ( (int) gc_poll_response.cstick_y - gc_origin_data.cstick_y );
                 adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
                 adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
 
@@ -922,12 +922,12 @@ void gcusb_send_data(bool repeat)
                 gc_input.button_r       = gc_poll_response.button_r;
                 gc_input.button_l       = gc_poll_response.button_l;
 
-                adj_x   = (int) gc_poll_response.stick_x + gc_origin_data.stick_x;
-                adj_y   = (int) gc_poll_response.stick_y + gc_origin_data.stick_y;
-                adj_cx  = (int) gc_poll_response.cstick_x + gc_origin_data.cstick_x;
-                adj_cy  = (int) gc_poll_response.cstick_y + gc_origin_data.cstick_y;
-                adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
-                adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
+                adj_x   = (int) gc_poll_response.stick_x    - gc_origin_data.stick_x;
+                adj_y   = (int) gc_poll_response.stick_y    - gc_origin_data.stick_y;
+                adj_cx  = (int) gc_poll_response.cstick_x   - gc_origin_data.cstick_x;
+                adj_cy  = (int) gc_poll_response.cstick_y   - gc_origin_data.cstick_y;
+                adj_tl  = (int) gc_poll_response.trigger_l  - gc_origin_data.trigger_l;
+                adj_tr  = (int) gc_poll_response.trigger_r  - gc_origin_data.trigger_r;
 
                 gc_input.stick_x        = (uint8_t) adj_x;
                 gc_input.stick_y        = (uint8_t) adj_y;
@@ -989,12 +989,12 @@ void gcusb_send_data(bool repeat)
                     xi_input.button_back    = 0;
                 }
 
-                adj_x   = (int) gc_poll_response.stick_x + gc_origin_data.stick_x;
-                adj_y   = 256 - (int) gc_poll_response.stick_y + gc_origin_data.stick_y;
-                adj_cx  = (int) gc_poll_response.cstick_x + gc_origin_data.cstick_x;
-                adj_cy  = 256 - (int) gc_poll_response.cstick_y + gc_origin_data.cstick_y;
-                adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
-                adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
+                adj_x   = (int) gc_poll_response.stick_x         - gc_origin_data.stick_x;
+                adj_y   = 256 - ((int) gc_poll_response.stick_y  - gc_origin_data.stick_y);
+                adj_cx  = (int) gc_poll_response.cstick_x        - gc_origin_data.cstick_x;
+                adj_cy  = 256 - ((int) gc_poll_response.cstick_y - gc_origin_data.cstick_y);
+                adj_tl  = (int) gc_poll_response.trigger_l       - gc_origin_data.trigger_l;
+                adj_tr  = (int) gc_poll_response.trigger_r       - gc_origin_data.trigger_r;
 
                 xi_input.stick_left_x   = (uint16_t) scale_axis(adj_x)  << 8;
                 xi_input.stick_left_y   = (uint16_t) scale_axis(adj_y)  << 8;

@@ -114,7 +114,7 @@ void main_gamecube_task(void *parameters)
                     else
                     {
 
-                        memset(&gc_poll_response, 0, 3);
+                        memset(&gc_poll_response, 0, 2);
 
                         for (uint8_t i = 0; i < 3; i++)
                         {
@@ -175,10 +175,10 @@ void main_gamecube_task(void *parameters)
 
                         // Subtract the data we got from 128. This will tell us how off we are from center.
                         // A negative value is fine.
-                        gc_origin_data.stick_x      = 128 - (int) gc_poll_response.stick_x;
-                        gc_origin_data.stick_y      = 128 - (int) gc_poll_response.stick_y;
-                        gc_origin_data.cstick_x     = 128 - (int) gc_poll_response.cstick_x;
-                        gc_origin_data.cstick_y     = 128 - (int) gc_poll_response.cstick_y;
+                        gc_origin_data.stick_x      = (int) gc_poll_response.stick_x - 128;
+                        gc_origin_data.stick_y      = (int) gc_poll_response.stick_y - 128;
+                        gc_origin_data.cstick_x     = (int) gc_poll_response.cstick_x - 128;
+                        gc_origin_data.cstick_y     = (int) gc_poll_response.cstick_y - 128;
                         gc_origin_data.trigger_l    = gc_poll_response.trigger_l;
                         gc_origin_data.trigger_r    = gc_poll_response.trigger_r;
 
@@ -195,7 +195,7 @@ void main_gamecube_task(void *parameters)
                     
                 case CMD_PHASE_POLL:
                     
-                    memset(&gc_poll_response, 0, 3);
+                    memset(&gc_poll_response, 0, 2);
 
                     for (uint8_t i = 0; i < 3; i++)
                     {
