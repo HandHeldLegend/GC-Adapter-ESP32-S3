@@ -14,6 +14,7 @@ rgb_s led_colors[GC_LED_COUNT] = {COLOR_RED};
 TaskHandle_t usb_task_handle = NULL;
 bool mode_change_toggle = false;
 bool mode_button_pressed = false;
+
 #if ADAPTER_DEBUG_ENABLE
 TaskHandle_t debug_task_handle = NULL;
 #endif
@@ -28,9 +29,9 @@ void debug_task(void *parameters)
     cmd_phase = CMD_PHASE_DEBUG;
     while(1)
     {
-        // Simulate controller connected every 1 ms
+        // Simulate controller connected every 8 ms
         rx_recieved = 1;
-        vTaskDelay(8/portTICK_PERIOD_MS);
+        vTaskDelay(1/portTICK_PERIOD_MS);
     }
 }
 bool dtoggle = false;
@@ -54,8 +55,13 @@ void main_gamecube_task(void *parameters)
             {
                 case CMD_PHASE_DEBUG:
                     uint8_t b = !gpio_get_level(APP_BUTTON);
-                    gc_poll_response.button_z = b;
+                    
+                    memset(&gc_poll_response, 0, sizeof(gc_poll_response));
                     gc_poll_response.button_a = b;
+                    gc_poll_response.stick_x = 128;
+                    gc_poll_response.stick_y = 128;
+                    gc_poll_response.cstick_x = 128;
+                    gc_poll_response.cstick_y = 128;
                     if (adapter_status == GCSTATUS_WORKING)
                     {
                         gcusb_send_data(false);
@@ -274,15 +280,15 @@ void main_gamecube_task(void *parameters)
             rx_timeout+=1;
             if (rx_timeout > 1000)
             {
+                #if ADAPTER_DEBUG_ENABLE
+                cmd_phase = CMD_PHASE_DEBUG;
+                #else
+
+                cmd_phase = CMD_PHASE_PROBE;
                 rx_timeout = 0;
                 rgb_setall(COLOR_RED, led_colors);
                 rgb_show();
                 memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
-                #if ADAPTER_DEBUG_ENABLE
-                cmd_phase = CMD_PHASE_DEBUG;
-                #else
-                cmd_phase = CMD_PHASE_PROBE;
-                #endif
 
                 JB_RX_MEMOWNER  = 1;
                 JB_RX_RDRST     = 1;
@@ -296,8 +302,12 @@ void main_gamecube_task(void *parameters)
                 JB_TX_WRRST     = 1;
                 JB_TX_CLEARISR  = 1;
                 JB_TX_BEGIN     = 1;
+                #endif
             }
 
+            #if ADAPTER_DEBUG_ENABLE
+
+            #else
             if (!gpio_get_level(APP_BUTTON) && !mode_button_pressed)
             {
                 mode_button_pressed = true;
@@ -318,6 +328,7 @@ void main_gamecube_task(void *parameters)
                 save_adapter_mode();
                 esp_restart();
             }
+            #endif
             
         }
     }
@@ -339,9 +350,13 @@ void app_main(void)
     load_adapter_mode();
 
     util_rgb_init(led_colors, RGB_MODE_GRB);
-    rgb_setbrightness(255);
+    rgb_setbrightness(25);
 
     cmd_phase = CMD_PHASE_PROBE;
+
+    #if ADAPTER_DEBUG_ENABLE
+    adapter_mode = USB_MODE_GC;
+    #endif
 
     switch(adapter_mode)
     {
@@ -366,11 +381,11 @@ void app_main(void)
     rgb_show();
 
     gcusb_start(adapter_mode);
+    #if ADAPTER_DEBUG_ENABLE
+    xTaskCreatePinnedToCore(debug_task, "debug_task", 5000, NULL, 0, &debug_task_handle, 0);
+    #else
     gamecube_reader_start();
+    #endif
     xTaskCreatePinnedToCore(main_gamecube_task, "gc_task", 6000, NULL, 0, &usb_task_handle, 1);
 
-    #if ADAPTER_DEBUG_ENABLE
-    vTaskDelay(1000/portTICK_PERIOD_MS);
-    xTaskCreatePinnedToCore(debug_task, "debug_task", 2048, NULL, 0, &debug_task_handle, 0);
-    #endif
 }

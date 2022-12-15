@@ -9,7 +9,12 @@
 // Defines for configuration of RGB driver utility
 #define RGB_SPIBUS  SPI2_HOST
 #define GC_LED_COUNT 1
+
+#if ADAPTER_DEBUG_ENABLE
+#define GC_LED_GPIO GPIO_NUM_48
+#else
 #define GC_LED_GPIO GPIO_NUM_38
+#endif
 
 #define RGB_MODE_RGB    0
 #define RGB_MODE_GRB    1

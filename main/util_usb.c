@@ -160,7 +160,7 @@ const uint8_t hid_report_descriptor[] = {
     0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
 
     0xC0,              // End Collection
-    // 94 bytes
+    // 98 bytes
 };
 
 static const uint8_t ns_configuration_descriptor[] = {
@@ -294,7 +294,7 @@ static const uint8_t gc_hid_configuration_descriptor[] = {
     // Endpoint Descriptor
     7, TUSB_DESC_ENDPOINT, 0x81, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(37), 1,
     // Endpoint Descriptor
-    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(6), 8,
+    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(6), 1,
 };  
 
 /**** GameCube Adapter TinyUSB Config ****/
@@ -588,7 +588,25 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_
             {
                 if (buffer[0] == 0x11)
                 {
-                    rx_vibrate = buffer[1] & 0x1;
+                    ESP_LOGI("RUMBLE", "Rx");
+                    for (uint8_t x = 0; x < bufsize-1; x++)
+                    {
+                        ESP_LOGI("d: ", "%X", (unsigned int) buffer[x+1]);
+                    }
+                    rx_vibrate = (buffer[1] > 0) ? VIBRATE_ON : VIBRATE_OFF;
+                }
+                else if (buffer[0] == 0x13)
+                {
+                    ESP_LOGI("INIT", "Rx");
+                    adapter_status = GCSTATUS_WORKING;
+                }
+                else
+                {
+                    ESP_LOGI("cmd", "Rx: %X", (unsigned int) buffer[0]);
+                    for (uint8_t x = 0; x < bufsize-1; x++)
+                    {
+                        ESP_LOGI("d: ", "%X", (unsigned int) buffer[x+1]);
+                    }
                 }
             }
             break;
@@ -808,7 +826,10 @@ esp_err_t gcusb_start(usb_mode_t mode)
             break;
     }
 
-    adapter_status = GCSTATUS_WORKING;
+    if (mode != USB_MODE_GC)
+    {
+        adapter_status = GCSTATUS_WORKING;
+    }
     return ESP_OK;
 }
 
@@ -940,18 +961,35 @@ void gcusb_send_data(bool repeat)
             if (first)
             {
                 memcpy(&gc_buffer[2], &gc_input, 8);
+                /*GC adapter notes for new data
+                with only black USB plugged in
+                - no controller, byte 1 is 0
+                - controller port 1, byte 1 is 0x10
+                - controller port 2, byte 10 is 0x10
+
+                with both USB plugged in
+                - no controller, byte 1 is 0x04
+                - controller port 1, byte is 0x14 */
+                gc_buffer[1] = 0x14;
+                gc_buffer[10] = 0x04;
+                gc_buffer[19] = 0x04;
+                gc_buffer[28] = 0x04;
             }
             
             gc_buffer[0] = 0x21;
-            gc_buffer[1] = 0x10;
 
-            if (usb_clear)
+            if (usb_clear && tud_hid_ready())
             {
                 usb_clear = false;
-                tud_hid_report(0, &gc_buffer, GC_HID_LEN); 
+                if (tud_hid_report(0, &gc_buffer, GC_HID_LEN))
+                {
+                    first = true;
+                }
+                else
+                {
+                    ESP_LOGE("USB", "Failed send");
+                }
             }
-
-            first = true;
             
             break;
 
@@ -1010,7 +1048,7 @@ void gcusb_send_data(bool repeat)
                 xi_input.dpad_hat = dir_to_hat(HAT_MODE_XI, lr, ud);
             }
             
-            if (usb_clear)
+            if (usb_clear && tud_ready())
             {
                 memcpy(xi_buffer, &xi_input, sizeof(xi_input_s));
                 usb_clear = false;

@@ -43,7 +43,7 @@ typedef struct
     uint8_t id_upper;
     uint8_t id_lower;
     uint8_t junk;
-} gc_probe_response_s;
+} __attribute__ ((packed)) gc_probe_response_s;
 
 extern gc_probe_response_s  gc_probe_response;
 
@@ -98,7 +98,7 @@ typedef struct
     int     cstick_y;
     int     trigger_l;
     int     trigger_r;
-} gc_origin_data_s;
+} __attribute__ ((packed)) gc_origin_data_s;
 
 typedef enum 
 {
