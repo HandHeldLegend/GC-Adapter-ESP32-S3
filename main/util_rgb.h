@@ -46,9 +46,9 @@ typedef struct
         uint32_t rgb;
     };
     
-} rgb_s;
+} __attribute__ ((packed)) rgb_s;
 
-extern rgb_s led_colors[];
+extern rgb_s current_color;
 
 // We use this type to set the bits
 // appropriately for the SPI output.
@@ -68,15 +68,7 @@ typedef struct
         };
         uint32_t splitter; 
     };
-} rgb_splitter_s;
-
-typedef struct
-{
-    spi_device_handle_t *spi_handle;
-    rgb_s colors1[GC_LED_COUNT];
-    rgb_s colors2[GC_LED_COUNT];
-    uint16_t frames;
-} rgb_anim_s;
+} __attribute__ ((packed)) rgb_splitter_s;
 
 typedef enum
 {
@@ -118,13 +110,13 @@ rgb_s rgb_from_hsv(uint8_t h, int8_t s, uint8_t v);
 void rgb_setbrightness(uint8_t brightness);
 
 // Set all RGB colors to the same.
-void rgb_setall(rgb_s color, rgb_s *led_colors);
+void rgb_setcolor(rgb_s color);
 
 // Update the LED colors and brightness.
 void rgb_show();
 
 // Initialize RGB Controller Backend
 // Only support WS2812B Protocol!
-esp_err_t util_rgb_init(rgb_s *led_colors, util_rgb_mode_t mode);
+esp_err_t util_rgb_init(util_rgb_mode_t mode);
 
 #endif

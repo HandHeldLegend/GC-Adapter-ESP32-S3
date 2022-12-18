@@ -3,13 +3,60 @@
 
 #include "adapter_includes.h"
 
+// Dinput mode definitions
+#define DI_HID_LEN  10
+extern uint8_t          di_buffer[DI_HID_LEN];
+
+// Input structure for Nintendo Switch USB gamepad Data
+typedef struct
+{
+    uint8_t report_id;
+
+    union
+    {
+        struct
+        {
+            uint8_t button_y    : 1;
+            uint8_t button_b    : 1;
+            uint8_t button_a    : 1;
+            uint8_t button_x    : 1;
+            uint8_t trigger_l   : 1;
+            uint8_t trigger_r   : 1;
+            uint8_t trigger_zl  : 1;
+            uint8_t trigger_zr  : 1;
+        };
+        uint8_t buttons_1;
+    };
+
+    union
+    {
+        struct
+        {
+            uint8_t button_minus  : 1;
+            uint8_t button_plus   : 1;
+            uint8_t stick_left    : 1;
+            uint8_t stick_right   : 1;
+            uint8_t button_home   : 1;
+            uint8_t button_capture: 1;
+            uint8_t dummy_1       : 2;
+        }; 
+        uint8_t buttons_2;
+    };
+
+  uint8_t dpad_hat;
+  uint8_t stick_left_x;
+  uint8_t stick_left_y;
+  uint8_t stick_right_x;
+  uint8_t stick_right_y;
+  uint8_t analog_trigger_l;
+  uint8_t analog_trigger_r;
+} __attribute__ ((packed)) di_input_s;
+
+extern di_input_s di_input;
+
 // NS mode definitions
 #define NS_HID_LEN      8
 extern uint8_t          ns_buffer[NS_HID_LEN];
-
-// Generic HID definitions
-#define GP_HID_LEN      10
-extern uint8_t          hid_buffer[GP_HID_LEN];
 
 // Input structure for Nintendo Switch USB gamepad Data
 typedef struct
@@ -50,15 +97,11 @@ typedef struct
   uint8_t stick_left_y;
   uint8_t stick_right_x;
   uint8_t stick_right_y;
-  uint8_t analog_trigger_l;
-  uint8_t analog_trigger_r;
   uint8_t dummy_2;
 
 } __attribute__ ((packed)) ns_input_s;
 
 extern ns_input_s ns_input;
-//Reuse ns_input_s for generic input
-extern ns_input_s hid_input;
 
 // GC mode definitions
 /********************************/

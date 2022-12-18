@@ -9,7 +9,9 @@
         "tinyusb.h": "c",
         "tusb.h": "c",
         "osal.h": "c",
-        "osal_freertos.h": "c"
+        "osal_freertos.h": "c",
+        "spi_master.h": "c",
+        "adapter_memory.h": "c"
     },
     "idf.flashType": "UART",
     "idf.portWin": "COM14"

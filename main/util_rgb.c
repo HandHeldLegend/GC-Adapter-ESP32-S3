@@ -3,8 +3,8 @@
 spi_device_handle_t rgb_spi = NULL;
 util_rgb_status_t util_rgb_status = UTIL_RGB_STATUS_DISABLED;
 util_rgb_mode_t util_rgb_mode = UTIL_RGB_MODE_RGB;
-rgb_s *current_colors = NULL;
-uint8_t util_rgb_brightness = 128;
+rgb_s current_color = COLOR_RED;
+uint8_t util_rgb_brightness = 10;
 
 rgb_s rgb_blend(rgb_s color1, rgb_s color2, uint8_t blend_amount)
 {
@@ -24,6 +24,42 @@ rgb_s rgb_blend(rgb_s color1, rgb_s color2, uint8_t blend_amount)
     };
 
     return output;
+}
+
+uint8_t uint8_float_clamp(float in)
+{
+    int tmp = (int) in;
+    if (tmp >= 255)
+    {
+        return (uint8_t) 255;
+    }
+    else if (tmp <= 0)
+    {
+        return (uint8_t) 0;
+    }
+
+    return (uint8_t) tmp;
+}
+
+uint32_t rgb_brightadjust()
+{
+    float b = util_rgb_brightness;
+    float ratio = b / 255.0f;
+    float new_r = current_color.red;
+    float new_g = current_color.green;
+    float new_b = current_color.blue;
+
+    new_r = new_r * ratio;
+    new_g = new_g * ratio;
+    new_b = new_b * ratio;
+
+    rgb_s new_color = {
+        .red = uint8_float_clamp(new_r),
+        .green = uint8_float_clamp(new_g),
+        .blue = uint8_float_clamp(new_b),
+    };
+
+    return new_color.rgb;
 }
 
 #define HSV_SECTION_6 (0x20)
@@ -102,123 +138,106 @@ void rgb_create_packet(uint8_t *buffer)
     memset(buffer, 0x0, GC_LED_COUNT*RGB_BYTE_MULTIPLIER);
     uint8_t buffer_idx = 0;
 
-    rgb_s adjusted_colors[GC_LED_COUNT] = {0x00};
-
-    memcpy(adjusted_colors, current_colors, sizeof(rgb_s) * GC_LED_COUNT);
-
-    float ratio = (float) util_rgb_brightness / 255.0;
-    for (uint8_t s = 0; s < GC_LED_COUNT; s++)
-    {
-        float newRed    = (float) adjusted_colors[s].red     * ratio;
-        float newGreen  = (float) adjusted_colors[s].green   * ratio;
-        float newBlue   = (float) adjusted_colors[s].blue    * ratio;
-        adjusted_colors[s].red = (uint8_t) newRed;
-        adjusted_colors[s].green = (uint8_t) newGreen;
-        adjusted_colors[s].blue = (uint8_t) newBlue;
-    }
+    rgb_s adjusted_color = {
+        .rgb = rgb_brightadjust()
+    };
 
     // Set up a splitter
     rgb_splitter_s s_red    = {0};
     rgb_splitter_s s_green  = {0};
     rgb_splitter_s s_blue   = {0};
 
-    // Cycle through each LED first
-    for(uint8_t i = 0; i < GC_LED_COUNT; i++)
+
+    // There are three bytes to contend with
+    // for each LED. Each color is split up to occupy three SPI bytes.
+    // We have to cycle through each bit of each color and shift in the
+    // appropriate data.
+    memset(&s_red, 0, sizeof(rgb_splitter_s));
+    memset(&s_green, 0, sizeof(rgb_splitter_s));
+    memset(&s_blue, 0, sizeof(rgb_splitter_s));
+    
+    // Keep track of which bit
+    // we are setting with an index.
+    uint8_t s_idx   = 0;
+
+    for(uint8_t b = 0; b < 8; b++)
     {
-        // There are three bytes to contend with
-        // for each LED. Each color is split up to occupy three SPI bytes.
-        // We have to cycle through each bit of each color and shift in the
-        // appropriate data.
-        memset(&s_red, 0, sizeof(rgb_splitter_s));
-        memset(&s_green, 0, sizeof(rgb_splitter_s));
-        memset(&s_blue, 0, sizeof(rgb_splitter_s));
-        
-        // Keep track of which bit
-        // we are setting with an index.
-        uint8_t s_idx   = 0;
+        uint8_t red_bit = 0;
+        uint8_t green_bit = 0;
+        uint8_t blue_bit = 0;
 
-        for(uint8_t b = 0; b < 8; b++)
+        // Account for GRB mode (From rightmost bit to left)
+        if (util_rgb_mode == UTIL_RGB_MODE_GRB)
         {
-            uint8_t red_bit = 0;
-            uint8_t green_bit = 0;
-            uint8_t blue_bit = 0;
-
-            // Account for GRB mode (From rightmost bit to left)
-            if (util_rgb_mode == UTIL_RGB_MODE_GRB)
-            {
-                red_bit     = (adjusted_colors[i].green  >> (7-b)) & 1;
-                green_bit   = (adjusted_colors[i].red    >> (7-b)) & 1;
-            }
-            else
-            {
-                red_bit     = (adjusted_colors[i].red    >> (7-b)) & 1;
-                green_bit   = (adjusted_colors[i].green  >> (7-b)) & 1;
-            }
-            
-            blue_bit   =    (adjusted_colors[i].blue  >> (7-b)) & 1;
-            
-            // Set the bits in the splitter from least significant to most.
-            if (red_bit)
-            {
-                s_red.splitter      |= (RGB_HIGH << (s_idx));
-            }
-            else
-            {
-                s_red.splitter      |= (RGB_LOW << (s_idx));
-            }
-
-            if (green_bit)
-            {
-                s_green.splitter      |= (RGB_HIGH << (s_idx));
-            }
-            else
-            {
-                s_green.splitter      |= (RGB_LOW << (s_idx));
-            }
-
-            if (blue_bit)
-            {
-                s_blue.splitter      |= (RGB_HIGH << (s_idx));
-            }
-            else
-            {
-                s_blue.splitter      |= (RGB_LOW << (s_idx));
-            }
-
-            s_idx   += 3;
+            red_bit     = (adjusted_color.green  >> (b)) & 1;
+            green_bit   = (adjusted_color.red    >> (b)) & 1;
+        }
+        else
+        {
+            red_bit     = (adjusted_color.red    >> (b)) & 1;
+            green_bit   = (adjusted_color.green  >> (b)) & 1;
+        }
+        
+        blue_bit   =    (adjusted_color.blue  >> (b)) & 1;
+        
+        // Set the bits in the splitter from least significant to most.
+        if (red_bit)
+        {
+            s_red.splitter      |= (RGB_HIGH << (s_idx));
+        }
+        else
+        {
+            s_red.splitter      |= (RGB_LOW << (s_idx));
         }
 
-        // On ESP32-S3 we have to invert the byte : )
-        #if CONFIG_IDF_TARGET_ESP32S3
-            // Once we've processed all 8 bits of the three colors, copy to our SPI buffer
-            buffer[buffer_idx]  = ~s_red.byte0;
-            buffer[buffer_idx+1] = ~s_red.byte1;
-            buffer[buffer_idx+2] = ~s_red.byte2;
+        if (green_bit)
+        {
+            s_green.splitter      |= (RGB_HIGH << (s_idx));
+        }
+        else
+        {
+            s_green.splitter      |= (RGB_LOW << (s_idx));
+        }
 
-            buffer[buffer_idx+3] = ~s_green.byte0;
-            buffer[buffer_idx+4] = ~s_green.byte1;
-            buffer[buffer_idx+5] = ~s_green.byte2;
+        if (blue_bit)
+        {
+            s_blue.splitter      |= (RGB_HIGH << (s_idx));
+        }
+        else
+        {
+            s_blue.splitter      |= (RGB_LOW << (s_idx));
+        }
 
-            buffer[buffer_idx+6] = ~s_blue.byte0;
-            buffer[buffer_idx+7] = ~s_blue.byte1;
-            buffer[buffer_idx+8] = ~s_blue.byte2;
-        #else
-            buffer[buffer_idx] = s_red.byte0;
-            buffer[buffer_idx+1] = s_red.byte1;
-            buffer[buffer_idx+2] = s_red.byte2;
-
-            buffer[buffer_idx+3] = s_green.byte0;
-            buffer[buffer_idx+4] = s_green.byte1;
-            buffer[buffer_idx+5] = s_green.byte2;
-
-            buffer[buffer_idx+6] = s_blue.byte0;
-            buffer[buffer_idx+7] = s_blue.byte1;
-            buffer[buffer_idx+8] = s_blue.byte2;
-        #endif
-
-        // Increase our buffer idx
-        buffer_idx += 9;
+        s_idx   += 3;
     }
+
+    // On ESP32-S3 we have to invert the byte : )
+    #if CONFIG_IDF_TARGET_ESP32S3
+        // Once we've processed all 8 bits of the three colors, copy to our SPI buffer
+        buffer[buffer_idx]  = ~s_red.byte0;
+        buffer[buffer_idx+1] = ~s_red.byte1;
+        buffer[buffer_idx+2] = ~s_red.byte2;
+
+        buffer[buffer_idx+3] = ~s_green.byte0;
+        buffer[buffer_idx+4] = ~s_green.byte1;
+        buffer[buffer_idx+5] = ~s_green.byte2;
+
+        buffer[buffer_idx+6] = ~s_blue.byte0;
+        buffer[buffer_idx+7] = ~s_blue.byte1;
+        buffer[buffer_idx+8] = ~s_blue.byte2;
+    #else
+        buffer[buffer_idx] = s_red.byte0;
+        buffer[buffer_idx+1] = s_red.byte1;
+        buffer[buffer_idx+2] = s_red.byte2;
+
+        buffer[buffer_idx+3] = s_green.byte0;
+        buffer[buffer_idx+4] = s_green.byte1;
+        buffer[buffer_idx+5] = s_green.byte2;
+
+        buffer[buffer_idx+6] = s_blue.byte0;
+        buffer[buffer_idx+7] = s_blue.byte1;
+        buffer[buffer_idx+8] = s_blue.byte2;
+    #endif
 
 }
 
@@ -227,14 +246,9 @@ void rgb_setbrightness(uint8_t brightness)
     util_rgb_brightness = brightness;
 }
 
-void rgb_setall(rgb_s color, rgb_s *led_colors)
+void rgb_setcolor(rgb_s color)
 {
-    const char* TAG = "rgb_setall";
-    
-    for (uint8_t i = 0; i < GC_LED_COUNT; i++)
-    {
-        led_colors[i].rgb = color.rgb;
-    }
+    current_color = color;
 }
 
 void rgb_show()
@@ -247,11 +261,11 @@ void rgb_show()
         return;
     }
 
-    uint8_t rgb_spi_buffer[GC_LED_COUNT*RGB_BYTE_MULTIPLIER];
+    uint8_t rgb_spi_buffer[RGB_BYTE_MULTIPLIER];
     rgb_create_packet(rgb_spi_buffer);
 
     spi_transaction_t trans = {
-        .length = GC_LED_COUNT*RGB_BYTE_MULTIPLIER*8,
+        .length = RGB_BYTE_MULTIPLIER*8,
         .tx_buffer = rgb_spi_buffer,
         .user=(void*)1,
     };
@@ -259,7 +273,7 @@ void rgb_show()
     esp_err_t err = spi_device_transmit(rgb_spi, &trans);
 }
 
-esp_err_t util_rgb_init(rgb_s *led_colors, util_rgb_mode_t mode)
+esp_err_t util_rgb_init(util_rgb_mode_t mode)
 {
     const char* TAG = "util_rgb_init";
     esp_err_t err; 
@@ -308,8 +322,6 @@ esp_err_t util_rgb_init(rgb_s *led_colors, util_rgb_mode_t mode)
     ESP_LOGI(TAG, "Started RGB Service OK.");
     util_rgb_status = UTIL_RGB_STATUS_AVAILABLE;
     util_rgb_mode = mode;
-    // Set current colors to the pointer referenced by user.
-    current_colors = led_colors;
 
     return ESP_OK;
 }

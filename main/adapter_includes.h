@@ -41,6 +41,7 @@
 #include "util_rgb.h"
 #include "util_usb.h"
 #include "adapter_memory.h"
+#include "command_handler.h"
 
 // Drivers
 #include "driver/gpio.h"

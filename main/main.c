@@ -10,7 +10,7 @@
 #define APP_BUTTON (GPIO_NUM_0) // Use BOOT signal by default
 static const char *TAG = "Mitch GC Pro Adapter";
 
-rgb_s led_colors[GC_LED_COUNT] = {COLOR_RED};
+rgb_s led_color = COLOR_RED;
 TaskHandle_t usb_task_handle = NULL;
 bool mode_change_toggle = false;
 bool mode_button_pressed = false;
@@ -190,7 +190,7 @@ void main_gamecube_task(void *parameters)
 
                         memcpy(JB_TX_MEM, gcmd_poll_rmt, sizeof(rmt_item32_t) * GCMD_POLL_LEN);
 
-                        rgb_setall(COLOR_GREEN, led_colors);
+                        rgb_setcolor(COLOR_GREEN);
                         rgb_show();
 
                         cmd_phase = CMD_PHASE_POLL;
@@ -286,7 +286,7 @@ void main_gamecube_task(void *parameters)
 
                 cmd_phase = CMD_PHASE_PROBE;
                 rx_timeout = 0;
-                rgb_setall(COLOR_RED, led_colors);
+                rgb_setcolor(COLOR_RED);
                 rgb_show();
                 memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
 
@@ -320,10 +320,10 @@ void main_gamecube_task(void *parameters)
             if (mode_change_toggle)
             {
                 mode_change_toggle = false;
-                adapter_mode += 1;
-                if (adapter_mode == USB_MODE_MAX)
+                adapter_settings.adapter_mode += 1;
+                if (adapter_settings.adapter_mode == USB_MODE_MAX)
                 {
-                    adapter_mode = USB_MODE_NS;
+                    adapter_settings.adapter_mode = USB_MODE_NS;
                 }
                 save_adapter_mode();
                 esp_restart();
@@ -349,8 +349,8 @@ void app_main(void)
 
     load_adapter_mode();
 
-    util_rgb_init(led_colors, RGB_MODE_GRB);
-    rgb_setbrightness(25);
+    util_rgb_init(RGB_MODE_GRB);
+    rgb_setbrightness(adapter_settings.led_brightness);
 
     cmd_phase = CMD_PHASE_PROBE;
 
@@ -358,29 +358,29 @@ void app_main(void)
     adapter_mode = USB_MODE_GC;
     #endif
 
-    switch(adapter_mode)
+    switch(adapter_settings.adapter_mode)
     {
         default:
         case USB_MODE_NS:
-            rgb_setall(COLOR_YELLOW, led_colors);
+            rgb_setcolor(COLOR_YELLOW);
         break;
         case USB_MODE_GC:
-            rgb_setall(COLOR_PURPLE, led_colors);
+            rgb_setcolor(COLOR_PURPLE);
         break;
         case USB_MODE_GENERIC:
-            rgb_setall(COLOR_BLUE, led_colors);
+            rgb_setcolor(COLOR_BLUE);
         break;
         case USB_MODE_XINPUT:
             rgb_s xbox_color = {
                 .rgb = 0x107C10,
             };
-            rgb_setall(xbox_color, led_colors);
+            rgb_setcolor(xbox_color);
             break;
     }
     
     rgb_show();
 
-    gcusb_start(adapter_mode);
+    gcusb_start(adapter_settings.adapter_mode);
     #if ADAPTER_DEBUG_ENABLE
     xTaskCreatePinnedToCore(debug_task, "debug_task", 5000, NULL, 0, &debug_task_handle, 0);
     #else
