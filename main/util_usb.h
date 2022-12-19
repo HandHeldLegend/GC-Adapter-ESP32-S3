@@ -5,10 +5,10 @@
 
 typedef enum
 {
-    USB_MODE_NS,
-    USB_MODE_GC,
-    USB_MODE_GENERIC,
-    USB_MODE_XINPUT,
+    USB_MODE_GENERIC  = 0x00,
+    USB_MODE_NS       = 0x01,
+    USB_MODE_XINPUT   = 0x02,
+    USB_MODE_GC       = 0x03,
     USB_MODE_MAX,
 } usb_mode_t;
 

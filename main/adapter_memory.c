@@ -75,8 +75,8 @@ void load_adapter_defaults(void)
         .led_brightness = 50,
         .magic_num = MAGIC_NUM,
         .trigger_mode = 0x0000,
-        .trigger_threshold_l = 0x00,
-        .trigger_threshold_r = 0x00,
+        .trigger_threshold_l = 0xFF,
+        .trigger_threshold_r = 0xFF,
     };
 
     const char* TAG = "load_adapter_defaults";

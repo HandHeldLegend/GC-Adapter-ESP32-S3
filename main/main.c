@@ -323,7 +323,7 @@ void main_gamecube_task(void *parameters)
                 adapter_settings.adapter_mode += 1;
                 if (adapter_settings.adapter_mode == USB_MODE_MAX)
                 {
-                    adapter_settings.adapter_mode = USB_MODE_NS;
+                    adapter_settings.adapter_mode = 0x00;
                 }
                 save_adapter_mode();
                 esp_restart();

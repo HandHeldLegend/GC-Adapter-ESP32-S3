@@ -4,10 +4,6 @@ void command_handler(const uint8_t *data, uint16_t bufsize)
 {
     switch (data[1])
     {
-        // Set all settings together
-        case CMD_SETTINGS_BULKALL:
-            
-            break;
         // Reset settings to default
         case CMD_SETTINGS_DEFAULT:
             load_adapter_defaults();
@@ -15,7 +11,6 @@ void command_handler(const uint8_t *data, uint16_t bufsize)
 
         // Save all settings
         case CMD_SETTINGS_SAVEALL:
-            memcpy(&adapter_settings, &data[2], sizeof(adapter_settings_s));
             save_adapter_mode();
             break;
 
@@ -43,13 +38,65 @@ void command_handler(const uint8_t *data, uint16_t bufsize)
 
         // Set trigger mode
         case CMD_SETTINGS_TRIGGERMODE:
-            memcpy(&adapter_settings.trigger_mode, &data[2], sizeof(uint16_t));
+            switch (data[2])
+            {
+                default:
+                case USB_MODE_GENERIC:
+                    if (!data[3])
+                    {
+                        adapter_settings.di_trigger_l = data[4];
+                    }
+                    else
+                    {
+                        adapter_settings.di_trigger_r = data[4];
+                    }
+                break;
+
+                case USB_MODE_NS:
+                    if (!data[3])
+                    {
+                        adapter_settings.ns_trigger_l = data[4];
+                    }
+                    else
+                    {
+                        adapter_settings.ns_trigger_r = data[4];
+                    }
+                break;
+
+                case USB_MODE_GC:
+                    if (!data[3])
+                    {
+                        adapter_settings.gc_trigger_l = data[4];
+                    }
+                    else
+                    {
+                        adapter_settings.gc_trigger_r = data[4];
+                    }
+                break;
+
+                case USB_MODE_XINPUT:
+                    if (!data[3])
+                    {
+                        adapter_settings.xi_trigger_l = data[4];
+                    }
+                    else
+                    {
+                        adapter_settings.xi_trigger_r = data[4];
+                    }
+                break;
+            }
             break;
 
         // Set trigger sensitivity
         case CMD_SETTINGS_TRIGGERSENSITIVITY:
-            adapter_settings.trigger_threshold_l = data[2];
-            adapter_settings.trigger_threshold_r = data[3];
+            if (!data[2])
+            {
+                adapter_settings.trigger_threshold_l = data[3];
+            }
+            else
+            {
+                adapter_settings.trigger_threshold_r = data[3];
+            }
             break;
     }
 }
