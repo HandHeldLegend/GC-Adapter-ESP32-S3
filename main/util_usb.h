@@ -44,7 +44,6 @@ typedef enum
   XI_HAT_CENTER       = 0x00,
 } xi_input_hat_dir_t;
 
-
 typedef enum
 {
     HAT_MODE_NS,

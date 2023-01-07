@@ -19,6 +19,7 @@ void command_handler(const uint8_t *data, uint16_t bufsize)
             uint8_t buffer[CMD_USB_REPORTLEN] = {0};
             buffer[0] = CMD_USB_REPORTID;
             buffer[1] = CMD_SETTINGS_GETALL;
+            adapter_settings.magic_num = MAGIC_NUM;
 
             memcpy(&buffer[2], &adapter_settings, sizeof(adapter_settings_s));
 

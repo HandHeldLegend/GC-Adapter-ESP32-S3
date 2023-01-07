@@ -113,7 +113,7 @@ const uint8_t dinput_hid_report_descriptor[] = {
             0x95, 0x0B,            //            REPORT_COUNT (11) 
             0x91, 0x02,            //            OUTPUT (Data,Var,Abs)
         0xc0,
-    // 116 bytes
+    // 125 bytes
     0xC0
 };
 
@@ -373,6 +373,7 @@ static const tusb_desc_device_t xi_device_descriptor = {
 
     .bMaxPacketSize0 = 64,
     .idVendor = 0x045E,
+    .idProduct = 0x0b20,
     .idProduct = 0xB13,
 
     .bcdDevice = 0x0572,
@@ -870,21 +871,44 @@ esp_err_t gcusb_start(usb_mode_t mode)
         default:
         case USB_MODE_NS:
             ESP_LOGI(TAG, "NS MODE");
-
+            ns_input.stick_left_x = 128;
+            ns_input.stick_left_y = 128;
+            ns_input.stick_right_x = 128;
+            ns_input.stick_right_y = 128;
+            ns_input.dpad_hat = NS_HAT_CENTER;
             ESP_ERROR_CHECK(tinyusb_driver_install(&ns_cfg));
             break;
         case USB_MODE_GENERIC:
             ESP_LOGI(TAG, "DINPUT MODE");
-            
+            di_input.stick_left_x = 128;
+            di_input.stick_left_y = 128;
+            di_input.stick_right_x = 128;
+            di_input.stick_right_y = 128;
+            di_input.analog_trigger_l = 0;
+            di_input.analog_trigger_r = 0;
+            di_input.dpad_hat = NS_HAT_CENTER;
             ESP_ERROR_CHECK(tinyusb_driver_install(&di_cfg));
             break;
         case USB_MODE_GC:
+            gc_input.stick_x = 128;
+            gc_input.stick_y = 128;
+            gc_input.cstick_x = 128;
+            gc_input.cstick_y = 128;
+            gc_input.trigger_l = 0;
+            gc_input.trigger_r = 0;
             ESP_LOGI(TAG, "GCC MODE");
 
             ESP_ERROR_CHECK(tinyusb_driver_install(&gc_cfg));
             break;
 
         case USB_MODE_XINPUT:
+            xi_input.stick_left_x = 128;
+            xi_input.stick_left_y = 128;
+            xi_input.stick_right_x = 128;
+            xi_input.stick_right_y = 128;
+            xi_input.analog_trigger_l = 0;
+            xi_input.analog_trigger_r = 0;
+            xi_input.dpad_hat = XI_HAT_CENTER;
             ESP_LOGI(TAG, "XINPUT MODE");
 
             ESP_ERROR_CHECK(tinyusb_driver_install(&xi_cfg));
@@ -939,23 +963,67 @@ void gcusb_send_data(bool repeat)
 
                 di_input.trigger_r = gc_poll_response.button_z;
 
-                di_input.trigger_zl = gc_poll_response.button_l;
-                di_input.trigger_zr = gc_poll_response.button_r;
-                
-                adj_x   = (int) gc_poll_response.stick_x - gc_origin_data.stick_x;
-                adj_y   = 256 - ( (int) gc_poll_response.stick_y - gc_origin_data.stick_y );
-                adj_cx  = (int) gc_poll_response.cstick_x - gc_origin_data.cstick_x;
-                adj_cy  = 256 - ( (int) gc_poll_response.cstick_y - gc_origin_data.cstick_y );
+                // Get origin modified Trigger analog data
                 adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
                 adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
 
-                di_input.stick_left_x   = scale_axis(adj_x);
-                di_input.stick_left_y   = scale_axis(adj_y);
-                di_input.stick_right_x  = scale_axis(adj_cx);
-                di_input.stick_right_y  = scale_axis(adj_cy);
+                switch( adapter_settings.di_trigger_l)
+                {
+                    default:
+                    case TRIG_MODE_OFF:
+                        di_input.analog_trigger_l   = scale_trigger(adj_tl);
+                        di_input.trigger_zl         = gc_poll_response.button_l;
+                        break;
+                    
+                    case TRIG_MODE_A2D:
+                        di_input.analog_trigger_l   = (adj_tl >= adapter_settings.trigger_threshold_l) ? 255 : scale_trigger(adj_tl);
+                        di_input.trigger_zl         = (adj_tl >= adapter_settings.trigger_threshold_l) ? 1 : 0;
+                        break;
 
-                di_input.analog_trigger_l  = scale_trigger(adj_tl);
-                di_input.analog_trigger_r  = scale_trigger(adj_tr);
+                    case TRIG_MODE_D2ALITE:
+                        di_input.analog_trigger_l   = (gc_poll_response.button_l) ? 85 : 0;
+                        di_input.trigger_zl         = 0;
+                        break;
+                    
+                    case TRIG_MODE_D2AFULL:
+                        di_input.analog_trigger_l   = (gc_poll_response.button_l) ? 255 : 0;
+                        di_input.trigger_zl         = gc_poll_response.button_l;
+                        break;
+                }
+
+                switch( adapter_settings.di_trigger_r)
+                {
+                    default:
+                    case TRIG_MODE_OFF:
+                        di_input.analog_trigger_r   = scale_trigger(adj_tr);
+                        di_input.trigger_zr         = gc_poll_response.button_r;
+                        break;
+                    
+                    case TRIG_MODE_A2D:
+                        di_input.analog_trigger_r   = (adj_tr >= adapter_settings.trigger_threshold_r) ? 255 : scale_trigger(adj_tr);
+                        di_input.trigger_zr         = (adj_tr >= adapter_settings.trigger_threshold_r) ? 1 : 0;
+                        break;
+
+                    case TRIG_MODE_D2ALITE:
+                        di_input.analog_trigger_r   = (gc_poll_response.button_r) ? 85 : 0;
+                        di_input.trigger_zr         = 0;
+                        break;
+                    
+                    case TRIG_MODE_D2AFULL:
+                        di_input.analog_trigger_r   = (gc_poll_response.button_r) ? 255 : 0;
+                        di_input.trigger_zr         = gc_poll_response.button_r;
+                        break;
+                }
+                
+                adj_x   = (int) gc_poll_response.stick_x - gc_origin_data.stick_x;
+                adj_y   = (int) gc_poll_response.stick_y - gc_origin_data.stick_y;
+                adj_cx  = (int) gc_poll_response.cstick_x - gc_origin_data.cstick_x;
+                adj_cy  = (int) gc_poll_response.cstick_y - gc_origin_data.cstick_y;
+
+                di_input.stick_left_x   = (uint8_t) adj_x;
+                di_input.stick_left_y   = (uint8_t) adj_y;
+                di_input.stick_right_x  = (uint8_t) adj_cx;
+                di_input.stick_right_y  = (uint8_t) adj_cy;
                 
             }
 
@@ -985,15 +1053,37 @@ void gcusb_send_data(bool repeat)
 
                 ns_input.trigger_r = gc_poll_response.button_z;
 
-                ns_input.trigger_zl = gc_poll_response.button_l;
-                ns_input.trigger_zr = gc_poll_response.button_r;
+                adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
+                adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
+
+                switch( adapter_settings.ns_trigger_l)
+                {
+                    default:
+                    case TRIG_MODE_OFF:
+                        ns_input.trigger_zl = gc_poll_response.button_l;
+                        break;
+                    
+                    case TRIG_MODE_A2D:
+                        ns_input.trigger_zl = (adj_tl >= adapter_settings.trigger_threshold_l) ? 1 : 0;
+                        break;
+                }
+
+                switch( adapter_settings.ns_trigger_r)
+                {
+                    default:
+                    case TRIG_MODE_OFF:
+                        ns_input.trigger_zr = gc_poll_response.button_r;
+                        break;
+                    
+                    case TRIG_MODE_A2D:
+                        ns_input.trigger_zr = (adj_tr >= adapter_settings.trigger_threshold_r) ? 1 : 0;
+                        break;
+                }
                 
                 adj_x   = (int) gc_poll_response.stick_x - gc_origin_data.stick_x;
                 adj_y   = 256 - ( (int) gc_poll_response.stick_y - gc_origin_data.stick_y );
                 adj_cx  = (int) gc_poll_response.cstick_x - gc_origin_data.cstick_x;
-                adj_cy  = 256 - ( (int) gc_poll_response.cstick_y - gc_origin_data.cstick_y );
-                adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
-                adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
+                adj_cy  = 256 - ( (int) gc_poll_response.cstick_y - gc_origin_data.cstick_y ); 
 
                 ns_input.stick_left_x   = scale_axis(adj_x);
                 ns_input.stick_left_y   = scale_axis(adj_y);
@@ -1027,22 +1117,68 @@ void gcusb_send_data(bool repeat)
 
                 gc_input.button_start   = gc_poll_response.button_start;
                 gc_input.button_z       = gc_poll_response.button_z;
-                gc_input.button_r       = gc_poll_response.button_r;
-                gc_input.button_l       = gc_poll_response.button_l;
+
+                adj_tl  = (int) gc_poll_response.trigger_l  - gc_origin_data.trigger_l;
+                adj_tr  = (int) gc_poll_response.trigger_r  - gc_origin_data.trigger_r;
+
+                switch( adapter_settings.gc_trigger_l)
+                {
+                    default:
+                    case TRIG_MODE_OFF:
+                        gc_input.trigger_l          = scale_trigger(adj_tl);
+                        gc_input.button_l           = gc_poll_response.button_l;
+                        break;
+                    
+                    case TRIG_MODE_A2D:
+                        gc_input.trigger_l          = (adj_tl >= adapter_settings.trigger_threshold_l) ? 255 : scale_trigger(adj_tl);
+                        gc_input.button_l           = (adj_tl >= adapter_settings.trigger_threshold_l) ? 1 : 0;
+                        break;
+
+                    case TRIG_MODE_D2ALITE:
+                        gc_input.trigger_l          = (gc_poll_response.button_l) ? 85 : 0;
+                        gc_input.button_l           = 0;
+                        break;
+                    
+                    case TRIG_MODE_D2AFULL:
+                        gc_input.trigger_l          = (gc_poll_response.button_l) ? 255 : 0;
+                        gc_input.button_l           = gc_poll_response.button_l;
+                        break;
+                }
+
+                switch( adapter_settings.gc_trigger_r)
+                {
+                    default:
+                    case TRIG_MODE_OFF:
+                        gc_input.trigger_r      = scale_trigger(adj_tr);
+                        gc_input.button_r       = gc_poll_response.button_r;
+                        break;
+                    
+                    case TRIG_MODE_A2D:
+                        gc_input.trigger_r      = (adj_tr >= adapter_settings.trigger_threshold_r) ? 255 : scale_trigger(adj_tr);
+                        gc_input.button_r       = (adj_tr >= adapter_settings.trigger_threshold_r) ? 1 : 0;
+                        break;
+
+                    case TRIG_MODE_D2ALITE:
+                        gc_input.trigger_r          = (gc_poll_response.button_r) ? 85 : 0;
+                        gc_input.button_r           = 0;
+                        break;
+                    
+                    case TRIG_MODE_D2AFULL:
+                        gc_input.trigger_r          = (gc_poll_response.button_r) ? 255 : 0;
+                        gc_input.button_r           = gc_poll_response.button_r;
+                        break;
+                }
 
                 adj_x   = (int) gc_poll_response.stick_x    - gc_origin_data.stick_x;
                 adj_y   = (int) gc_poll_response.stick_y    - gc_origin_data.stick_y;
                 adj_cx  = (int) gc_poll_response.cstick_x   - gc_origin_data.cstick_x;
                 adj_cy  = (int) gc_poll_response.cstick_y   - gc_origin_data.cstick_y;
-                adj_tl  = (int) gc_poll_response.trigger_l  - gc_origin_data.trigger_l;
-                adj_tr  = (int) gc_poll_response.trigger_r  - gc_origin_data.trigger_r;
 
                 gc_input.stick_x        = (uint8_t) adj_x;
                 gc_input.stick_y        = (uint8_t) adj_y;
                 gc_input.cstick_x       = (uint8_t) adj_cx;
                 gc_input.cstick_y       = (uint8_t) adj_cy;
-                gc_input.trigger_l      = scale_trigger(adj_tl);
-                gc_input.trigger_r      = scale_trigger(adj_tr);
+                
             }
 
             if (first)
@@ -1118,16 +1254,38 @@ void gcusb_send_data(bool repeat)
                 adj_y   = 256 - ((int) gc_poll_response.stick_y  - gc_origin_data.stick_y);
                 adj_cx  = (int) gc_poll_response.cstick_x        - gc_origin_data.cstick_x;
                 adj_cy  = 256 - ((int) gc_poll_response.cstick_y - gc_origin_data.cstick_y);
+
                 adj_tl  = (int) gc_poll_response.trigger_l       - gc_origin_data.trigger_l;
                 adj_tr  = (int) gc_poll_response.trigger_r       - gc_origin_data.trigger_r;
+
+                switch( adapter_settings.xi_trigger_l)
+                {
+                    default:
+                    case TRIG_MODE_OFF:
+                        xi_input.analog_trigger_l = (uint16_t) scale_trigger(adj_tl)<<2;
+                        break;
+                    
+                    case TRIG_MODE_A2D:
+                        xi_input.analog_trigger_l   = (adj_tl >= adapter_settings.trigger_threshold_l) ? (255<<2) : (uint16_t) scale_trigger(adj_tl)<<2;
+                        break;
+                }
+
+                switch( adapter_settings.xi_trigger_r)
+                {
+                    default:
+                    case TRIG_MODE_OFF:
+                        xi_input.analog_trigger_r = (uint16_t) scale_trigger(adj_tr)<<2;
+                        break;
+                    
+                    case TRIG_MODE_A2D:
+                        xi_input.analog_trigger_r   = (adj_tr >= adapter_settings.trigger_threshold_r) ? (255<<2) : (uint16_t) scale_trigger(adj_tr)<<2;
+                        break;
+                }
 
                 xi_input.stick_left_x   = (uint16_t) scale_axis(adj_x)  << 8;
                 xi_input.stick_left_y   = (uint16_t) scale_axis(adj_y)  << 8;
                 xi_input.stick_right_x  = (uint16_t) scale_axis(adj_cx) << 8;
                 xi_input.stick_right_y  = (uint16_t) scale_axis(adj_cy) << 8;
-
-                xi_input.analog_trigger_l = (uint16_t) scale_trigger(adj_tl)<<2;
-                xi_input.analog_trigger_r = (uint16_t) scale_trigger(adj_tr)<<2;
 
                 uint8_t lr = 1 - gc_poll_response.dpad_left + gc_poll_response.dpad_right;
                 uint8_t ud = 1 - gc_poll_response.dpad_down + gc_poll_response.dpad_up;

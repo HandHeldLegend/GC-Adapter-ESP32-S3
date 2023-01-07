@@ -3,7 +3,8 @@
 
 #include "adapter_includes.h"
 
-#define MAGIC_NUM 0x08A5
+// Corresponds to version number in web app.
+#define MAGIC_NUM 0x08A6
 #define SETTINGS_BYTE_LEN 8
 #define SETTINGS_NAMESPACE "adapt_settings"
 

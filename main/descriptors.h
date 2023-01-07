@@ -7,7 +7,7 @@
 #define DI_HID_LEN  10
 extern uint8_t          di_buffer[DI_HID_LEN];
 
-// Input structure for Nintendo Switch USB gamepad Data
+// Input structure for DInput USB gamepad Data
 typedef struct
 {
     uint8_t report_id;
