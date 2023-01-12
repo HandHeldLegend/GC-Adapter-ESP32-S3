@@ -2,6 +2,10 @@
 #define ADAPTER_INCLUDES_H
 
 #define ADAPTER_DEBUG_ENABLE 0
+#define APP_BUTTON (GPIO_NUM_0) // Use BOOT signal by default
+#define HOME_BUTTON (GPIO_NUM_4)
+
+#define PIN_MASK_GCP ( (1ULL << APP_BUTTON) | (1ULL << HOME_BUTTON))
 
 // Generics
 #include <stdlib.h>
@@ -41,6 +45,7 @@
 #include "util_usb.h"
 #include "adapter_memory.h"
 #include "command_handler.h"
+#include "util_common.h"
 
 // Drivers
 #include "driver/gpio.h"

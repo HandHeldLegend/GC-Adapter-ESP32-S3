@@ -3,8 +3,6 @@
 
 #include "adapter_includes.h"
 
-void rgb_animate_to(rgb_s target_color, uint16_t frames);
-
-void rgb_animator_init(void);
+void rgb_animate_to(rgb_s color);
 
 #endif

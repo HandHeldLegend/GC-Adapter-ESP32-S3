@@ -1049,6 +1049,10 @@ void gcusb_send_data(bool repeat)
 
                 ns_input.dpad_hat = dir_to_hat(HAT_MODE_NS, lr, ud);
 
+                uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
+                ns_input.button_home = !util_getbit(regread, HOME_BUTTON);
+                ns_input.button_capture = !util_getbit(regread, APP_BUTTON);
+
                 ns_input.button_plus = gc_poll_response.button_start;
 
                 ns_input.trigger_r = gc_poll_response.button_z;

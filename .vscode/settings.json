@@ -6,5 +6,9 @@
     "target/esp32s3.cfg"
   ],
   "idf.portWin": "COM14",
-  "idf.flashType": "UART"
+  "idf.flashType": "UART",
+  "files.associations": {
+    "adapter_includes.h": "c",
+    "util_common.h": "c"
+  }
 }

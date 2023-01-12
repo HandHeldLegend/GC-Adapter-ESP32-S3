@@ -6,8 +6,6 @@
 
 #include "adapter_includes.h"
 #include "descriptors.h"
-
-#define APP_BUTTON (GPIO_NUM_0) // Use BOOT signal by default
 static const char *TAG = "Mitch GC Pro Adapter";
 
 rgb_s colors[CONFIG_NP_RGB_COUNT];
@@ -191,8 +189,7 @@ void main_gamecube_task(void *parameters)
 
                         memcpy(JB_TX_MEM, gcmd_poll_rmt, sizeof(rmt_item32_t) * GCMD_POLL_LEN);
 
-                        //rgb_setcolor(COLOR_GREEN);
-                        //rgb_show();
+                        rgb_animate_to(COLOR_WHITE);
 
                         cmd_phase = CMD_PHASE_POLL;
                     }
@@ -287,8 +284,7 @@ void main_gamecube_task(void *parameters)
 
                 cmd_phase = CMD_PHASE_PROBE;
                 rx_timeout = 0;
-                //rgb_setcolor(COLOR_RED);
-                //rgb_show();
+                rgb_animate_to(COLOR_RED);
                 memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
 
                 JB_RX_MEMOWNER  = 1;
@@ -326,6 +322,7 @@ void main_gamecube_task(void *parameters)
                 {
                     adapter_settings.adapter_mode = 0x00;
                 }
+                rgb_animate_to(COLOR_BLACK);
                 save_adapter_mode();
                 esp_restart();
             }
@@ -339,7 +336,7 @@ void app_main(void)
 {
     // Initialize button that will trigger HID reports
     const gpio_config_t boot_button_config = {
-        .pin_bit_mask = BIT64(APP_BUTTON),
+        .pin_bit_mask = PIN_MASK_GCP,
         .mode = GPIO_MODE_INPUT,
         .intr_type = GPIO_INTR_DISABLE,
         .pull_up_en = true,
@@ -363,19 +360,19 @@ void app_main(void)
     {
         default:
         case USB_MODE_NS:
-            rgb_animate_to(COLOR_YELLOW, 25);
+            rgb_animate_to(COLOR_YELLOW);
         break;
         case USB_MODE_GC:
-            rgb_animate_to(COLOR_PURPLE, 25);
+            rgb_animate_to(COLOR_PURPLE);
         break;
         case USB_MODE_GENERIC:
-            rgb_animate_to(COLOR_BLUE, 25);
+            rgb_animate_to(COLOR_BLUE);
         break;
         case USB_MODE_XINPUT:
             rgb_s xbox_color = {
                 .rgb = 0x107C10,
             };
-            rgb_animate_to(xbox_color, 25);
+            rgb_animate_to(xbox_color);
             break;
     }
 
