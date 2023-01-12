@@ -38,7 +38,6 @@
 #include "gc.h"
 #include "rmt_gc.h"
 #include "descriptors.h"
-#include "util_rgb.h"
 #include "util_usb.h"
 #include "adapter_memory.h"
 #include "command_handler.h"
@@ -47,7 +46,8 @@
 #include "driver/gpio.h"
 #include "driver/rmt.h"
 #include "driver/rmt_types_legacy.h"
-#include "driver/spi_master.h"
+#include "esp32_neopixel.h"
+#include "rgb_animator.h"
 
 // HAL
 #include "hal/rmt_types.h"

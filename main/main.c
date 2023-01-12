@@ -10,7 +10,8 @@
 #define APP_BUTTON (GPIO_NUM_0) // Use BOOT signal by default
 static const char *TAG = "Mitch GC Pro Adapter";
 
-rgb_s led_color = COLOR_RED;
+rgb_s colors[CONFIG_NP_RGB_COUNT];
+
 TaskHandle_t usb_task_handle = NULL;
 bool mode_change_toggle = false;
 bool mode_button_pressed = false;
@@ -190,8 +191,8 @@ void main_gamecube_task(void *parameters)
 
                         memcpy(JB_TX_MEM, gcmd_poll_rmt, sizeof(rmt_item32_t) * GCMD_POLL_LEN);
 
-                        rgb_setcolor(COLOR_GREEN);
-                        rgb_show();
+                        //rgb_setcolor(COLOR_GREEN);
+                        //rgb_show();
 
                         cmd_phase = CMD_PHASE_POLL;
                     }
@@ -286,8 +287,8 @@ void main_gamecube_task(void *parameters)
 
                 cmd_phase = CMD_PHASE_PROBE;
                 rx_timeout = 0;
-                rgb_setcolor(COLOR_RED);
-                rgb_show();
+                //rgb_setcolor(COLOR_RED);
+                //rgb_show();
                 memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
 
                 JB_RX_MEMOWNER  = 1;
@@ -349,7 +350,7 @@ void app_main(void)
 
     load_adapter_mode();
 
-    util_rgb_init(RGB_MODE_GRB);
+    neopixel_init(colors, SPI3_HOST);
     rgb_setbrightness(adapter_settings.led_brightness);
 
     cmd_phase = CMD_PHASE_PROBE;
@@ -362,23 +363,21 @@ void app_main(void)
     {
         default:
         case USB_MODE_NS:
-            rgb_setcolor(COLOR_YELLOW);
+            rgb_animate_to(COLOR_YELLOW, 25);
         break;
         case USB_MODE_GC:
-            rgb_setcolor(COLOR_PURPLE);
+            rgb_animate_to(COLOR_PURPLE, 25);
         break;
         case USB_MODE_GENERIC:
-            rgb_setcolor(COLOR_BLUE);
+            rgb_animate_to(COLOR_BLUE, 25);
         break;
         case USB_MODE_XINPUT:
             rgb_s xbox_color = {
                 .rgb = 0x107C10,
             };
-            rgb_setcolor(xbox_color);
+            rgb_animate_to(xbox_color, 25);
             break;
     }
-    
-    rgb_show();
 
     gcusb_start(adapter_settings.adapter_mode);
     #if ADAPTER_DEBUG_ENABLE

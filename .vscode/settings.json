@@ -1,18 +1,10 @@
 {
-    "idf.adapterTargetName": "esp32s3",
-    "idf.openOcdConfigs": [
-        "board/esp32s3-bridge.cfg"
-    ],
-    "files.associations": {
-        "util_usb.h": "c",
-        "adapter_includes.h": "c",
-        "tinyusb.h": "c",
-        "tusb.h": "c",
-        "osal.h": "c",
-        "osal_freertos.h": "c",
-        "spi_master.h": "c",
-        "adapter_memory.h": "c"
-    },
-    "idf.flashType": "UART",
-    "idf.portWin": "COM14"
+  "C_Cpp.intelliSenseEngine": "Tag Parser",
+  "idf.adapterTargetName": "esp32s3",
+  "idf.openOcdConfigs": [
+    "interface/ftdi/esp32_devkitj_v1.cfg",
+    "target/esp32s3.cfg"
+  ],
+  "idf.portWin": "COM14",
+  "idf.flashType": "UART"
 }
