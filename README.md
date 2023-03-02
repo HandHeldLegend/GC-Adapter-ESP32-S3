@@ -1,80 +1,47 @@
-| Supported Targets | ESP32-S2 | ESP32-S3 |
-| ----------------- | -------- | -------- |
+# GC Pocket Adapter Firmware
+This is the official Github page for the GC Pocket Adapter from Hand Held Legend.
 
-# TinyUSB Human Interface Device Example
+## Software and PCB License
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/3.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/3.0/88x31.png" /></a><br />This firmware and PCB model are licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/3.0/">Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License</a>.
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+## 3D Models License
 
-Human interface devices (HID) are one of the most common USB devices, it is implemented in various devices such as keyboards, mice, game controllers, sensors and alphanumeric display devices.
-In this example, we implement USB keyboard and mouse.
-Upon connection to USB host (PC), the example application will sent 'key a/A pressed & released' events and move mouse in a square trajectory. To send these HID reports again, press the BOOT button, that is present on most ESP development boards (GPIO0).
+<a rel="license" href="http://creativecommons.org/licenses/by/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by/4.0/88x31.png" /></a><br />The 3D shell, buttons, and light pipe are licensed under a <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>.
 
-As a USB stack, a TinyUSB component is used.
+## Shop Links
+- [GC Pocket Adapter Kit (Includes 3D Printed Parts)](https://handheldlegend.com/products/gc-pocket-adapter-adapter-for-gamecube-controllers)
+- [PCB for GC Pocket Adapter (BYO 3D Parts)](https://handheldlegend.com/products/hardware-kit-for-gc-pocket-adapter)
+- [Screw, Ball, and Spring Hardware Kit](https://handheldlegend.com/products/hardware-kit-for-gc-pocket-adapter)
 
-## How to use example
+## Detailed Information
+All of our guides on assembly, updating the firmware, and operation
+are listed on [our Wiki page linked here](https://wiki.handheldlegend.com/gc-pocket-adapter).
 
-### Hardware Required
+## 3D Parts
+All 3D parts are in the [/3d directory](https://github.com/HandHeldLegend/GC-Adapter-ESP32-S3/tree/main/3d) on this Github repo in STEP format. A 3D STEP file is provided for accurate reference on the PCB dimensions.
 
-Any ESP board that have USB-OTG supported.
+For simpler printing with the smaller bits, we have array components for the buttons and light pipe in the [/3d/arrayed parts directory](https://github.com/HandHeldLegend/GC-Adapter-ESP32-S3/tree/main/3d/arrayed%20parts). These are prepared as STL files.
 
-#### Pin Assignment
+## Assembled Adapter
 
-_Note:_ In case your board doesn't have micro-USB connector connected to USB-OTG peripheral, you may have to DIY a cable and connect **D+** and **D-** to the pins listed below.
+![Adapter Front](https://github.com/HandHeldLegend/GC-Adapter-ESP32-S3/blob/main/images/full_adapter.png?raw=true)
+![Adapter Plug](https://github.com/HandHeldLegend/GC-Adapter-ESP32-S3/blob/main/images/gc_plug.png?raw=true)
+![USB Plug](https://github.com/HandHeldLegend/GC-Adapter-ESP32-S3/blob/main/images/type_c.png?raw=true)
 
-See common pin assignments for USB Device examples from [upper level](../../README.md#common-pin-assignments).
+## Features
+- 4 USB HID Input modes
+- Web configurator to change settings
+- Adapts GameCube controllers for use on Windows, Mac, Android, and Nintendo Switch
+- Up to 1ms USB polling rate (Dependent on machine it's plugged in to)
+- 1ms controller polling rate
+- RGB LED indicator light
+- Two buttons to add function to device
 
-Boot signal (GPIO0) is used to send HID reports to USB host.
-
-### Build and Flash
-
-Build the project and flash it to the board, then run monitor tool to view serial output:
-
-```bash
-idf.py -p PORT flash monitor
-```
-
-(Replace PORT with the name of the serial port to use.)
-
-(To exit the serial monitor, type ``Ctrl-]``.)
-
-See the Getting Started Guide for full steps to configure and use ESP-IDF to build projects.
-
-## Example Output
-
-After the flashing you should see the output at idf monitor:
-
-```
-I (290) cpu_start: Starting scheduler on PRO CPU.
-I (0) cpu_start: Starting scheduler on APP CPU.
-I (310) example: USB initialization
-I (310) tusb_desc:
-┌─────────────────────────────────┐
-│  USB Device Descriptor Summary  │
-├───────────────────┬─────────────┤
-│bDeviceClass       │ 0           │
-├───────────────────┼─────────────┤
-│bDeviceSubClass    │ 0           │
-├───────────────────┼─────────────┤
-│bDeviceProtocol    │ 0           │
-├───────────────────┼─────────────┤
-│bMaxPacketSize0    │ 64          │
-├───────────────────┼─────────────┤
-│idVendor           │ 0x303a      │
-├───────────────────┼─────────────┤
-│idProduct          │ 0x4004      │
-├───────────────────┼─────────────┤
-│bcdDevice          │ 0x100       │
-├───────────────────┼─────────────┤
-│iManufacturer      │ 0x1         │
-├───────────────────┼─────────────┤
-│iProduct           │ 0x2         │
-├───────────────────┼─────────────┤
-│iSerialNumber      │ 0x3         │
-├───────────────────┼─────────────┤
-│bNumConfigurations │ 0x1         │
-└───────────────────┴─────────────┘
-I (480) TinyUSB: TinyUSB Driver installed
-I (480) example: USB initialization DONE
-I (2490) example: Sending Keyboard report
-I (3040) example: Sending Mouse report
-```
+## Basic Operation
+- When the device is plugged in, the LED light shows a color to indicate which mode it is in. 
+	- Blue - DInput/Configuration Mode
+	- Yellow - Nintendo Switch Mode
+	- Purple - GameCube OEM Mode 
+	- Green - XInputHID Mode
+- With no controllers connected, pressing the left/right button will switch the current input mode.
+- The light will fade to red to indicate it is in standby. Plug in a controller and the light will turn white to indicate the controller is detected.
