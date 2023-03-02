@@ -83,8 +83,8 @@ const uint8_t dinput_hid_report_descriptor[] = {
             0x09, 0x31,        //   Usage (Y)
             0x09, 0x32,        //   Usage (Z)
             0x09, 0x35,        //   Usage (Rz)
-            0x09, 0x33,        //   Usage (axis)
-            0x09, 0x34,         // Usage (axis)
+            0x09, 0x33,        //   Usage (Rx)
+            0x09, 0x34,        //   Usage (Ry)
 
             0x75, 0x08,        //   Report Size (8)
             0x95, 0x06,        //   Report Count (6)
@@ -1188,15 +1188,17 @@ void gcusb_send_data(bool repeat)
             if (first)
             {
                 memcpy(&gc_buffer[2], &gc_input, 8);
+
                 /*GC adapter notes for new data
+                
                 with only black USB plugged in
                 - no controller, byte 1 is 0
-                - controller port 1, byte 1 is 0x10
-                - controller port 2, byte 10 is 0x10
+                - controller plugged in to port 1, byte 1 is 0x10
+                - controller plugged in port 2, byte 10 is 0x10
 
                 with both USB plugged in
                 - no controller, byte 1 is 0x04
-                - controller port 1, byte is 0x14 */
+                - controller plugged in to port 1, byte is 0x14 */
                 gc_buffer[1] = 0x14;
                 gc_buffer[10] = 0x04;
                 gc_buffer[19] = 0x04;
