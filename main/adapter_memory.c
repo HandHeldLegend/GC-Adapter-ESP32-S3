@@ -22,6 +22,7 @@ void load_adapter_settings(void)
     if (err != ESP_OK) 
     {
         ESP_LOGE(TAG, "During Adapter load settings, NVS Open failed.");
+        load_adapter_defaults();
         return;
     }
 
@@ -37,6 +38,7 @@ void load_adapter_settings(void)
         if (err != ESP_OK)
         {   
             ESP_LOGE(TAG, "Could not load settings. 0x%08X", (unsigned int) adapter_settings.settings_version);
+            load_adapter_defaults();
             return;
         }
         if (adapter_settings.settings_version != SETTINGS_VERSION)
