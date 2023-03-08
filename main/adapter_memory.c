@@ -3,9 +3,9 @@
 nvs_handle_t adapter_mem_handle;
 adapter_settings_s adapter_settings = {0};
 
-void load_adapter_mode(void)
+void load_adapter_settings(void)
 {
-    const char* TAG = "load_adapter_mode";
+    const char* TAG = "load_adapter_settings";
 
     // Initialize NVS
     esp_err_t err = nvs_flash_init();
@@ -36,12 +36,12 @@ void load_adapter_mode(void)
        err = nvs_get_blob(adapter_mem_handle, "adp_settings", &adapter_settings, &required_size);
         if (err != ESP_OK)
         {   
-            ESP_LOGE(TAG, "Could not load settings. 0x%08X", (unsigned int) adapter_settings.magic_num);
+            ESP_LOGE(TAG, "Could not load settings. 0x%08X", (unsigned int) adapter_settings.settings_version);
             return;
         }
-        if (adapter_settings.magic_num != MAGIC_NUM)
+        if (adapter_settings.settings_version != SETTINGS_VERSION)
         {
-            ESP_LOGI(TAG, "Settings magic bytes don't match. Setting to default...");
+            ESP_LOGI(TAG, "Settings firmware version out of date. Setting to default...");
             nvs_close(adapter_mem_handle);
 
             load_adapter_defaults();
@@ -49,7 +49,7 @@ void load_adapter_mode(void)
         }
         else
         {
-            ESP_LOGI(TAG, "Settings loaded with magic byte 0x%08X", (unsigned int) adapter_settings.magic_num);
+            ESP_LOGI(TAG, "Settings loaded with settings version byte 0x%08X", (unsigned int) adapter_settings.settings_version);
             nvs_close(adapter_mem_handle);
         }
         
@@ -73,10 +73,11 @@ void load_adapter_defaults(void)
     const adapter_settings_s default_s = {
         .adapter_mode = USB_MODE_GENERIC,
         .led_brightness = 50,
-        .magic_num = MAGIC_NUM,
+        .settings_version = SETTINGS_VERSION,
         .trigger_mode = 0x0000,
         .trigger_threshold_l = 0xFF,
         .trigger_threshold_r = 0xFF,
+        .zjump = 0x00,
     };
 
     const char* TAG = "load_adapter_defaults";
@@ -99,9 +100,9 @@ void load_adapter_defaults(void)
     return;
 }
 
-void save_adapter_mode(void)
+void save_adapter_settings(void)
 {
-    const char* TAG = "save_adapter_mode";
+    const char* TAG = "save_adapter_settings";
     esp_err_t err;
     // Open
     err = nvs_open(SETTINGS_NAMESPACE, NVS_READWRITE, &adapter_mem_handle);

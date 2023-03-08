@@ -1,7 +1,6 @@
 #include "util_usb.h"
 
 usb_mode_t adapter_mode         = USB_MODE_NS;
-adapter_status_t adapter_status = GCSTATUS_IDLE;
 
 /************* TinyUSB descriptors ****************/
 
@@ -38,7 +37,7 @@ static const tusb_desc_device_t di_device_descriptor = {
     .bcdDevice = CONFIG_TINYUSB_DESC_BCD_DEVICE,
     .iManufacturer = 0x01,
     .iProduct = 0x02,
-    .iSerialNumber = 0x03,
+    .iSerialNumber = 0x00,
     .bNumConfigurations = 0x01
 };
 
@@ -99,7 +98,7 @@ const uint8_t dinput_hid_report_descriptor[] = {
             0x15, 0x00,            //            LOGICAL_MINIMUM (0) 
             0x26, 0xff, 0x00,       //            LOGICAL_MAXIMUM (255) 
             0x75, 0x08,            //            REPORT_SIZE (8) 
-            0x95, 0x09,            //            REPORT_COUNT (11) 
+            0x95, 0x0A,            //            REPORT_COUNT (10) 
             0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
         0xc0,
 
@@ -110,7 +109,7 @@ const uint8_t dinput_hid_report_descriptor[] = {
             0x15, 0x00,            //            LOGICAL_MINIMUM (0) 
             0x26, 0xff, 0x00,       //            LOGICAL_MAXIMUM (255) 
             0x75, 0x08,            //            REPORT_SIZE (8) 
-            0x95, 0x0B,            //            REPORT_COUNT (11) 
+            0x95, 0x0A,            //            REPORT_COUNT (10) 
             0x91, 0x02,            //            OUTPUT (Data,Var,Abs)
         0xc0,
     // 125 bytes
@@ -127,7 +126,7 @@ static const uint8_t di_configuration_descriptor[] = {
     // Endpoint Descriptor
     7, TUSB_DESC_ENDPOINT, 0x81, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(64), 1,
     // Endpoint Descriptor
-    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(13), 1,
+    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(64), 1,
 };
 
 const tinyusb_config_t di_cfg = {
@@ -147,7 +146,6 @@ const tinyusb_config_t di_cfg = {
 // 3. Configuration Descriptor
 // 4. TinyUSB Config
 /**--------------------------**/
-
 static const tusb_desc_device_t ns_device_descriptor = {
     .bLength = 18,
     .bDescriptorType = TUSB_DESC_DEVICE,
@@ -163,7 +161,7 @@ static const tusb_desc_device_t ns_device_descriptor = {
     .bcdDevice = CONFIG_TINYUSB_DESC_BCD_DEVICE,
     .iManufacturer = 0x01,
     .iProduct = 0x02,
-    .iSerialNumber = 0x03,
+    .iSerialNumber = 0x00,
     .bNumConfigurations = 0x01
 };
 
@@ -230,7 +228,7 @@ static const uint8_t ns_configuration_descriptor[] = {
     TUD_CONFIG_DESCRIPTOR(1, 1, 0, TUSB_DESC_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 500),
 
     // Interface number, string index, boot protocol, report descriptor len, EP In address, size & polling interval
-    TUD_HID_DESCRIPTOR(0, 0, false, sizeof(ns_hid_report_descriptor), 0x81, 8, 1),
+    TUD_HID_DESCRIPTOR(0, 0, false, sizeof(ns_hid_report_descriptor), 0x81, 64, 1),
 };
 
 const tinyusb_config_t ns_cfg = {
@@ -595,32 +593,37 @@ uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_t
   return 0;
 }
 
-bool first = false;
-bool usb_clear = true;
 
 void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint8_t len)
 {   
-    switch (adapter_settings.adapter_mode)
+    if (usb_phase == GC_USB_IDLE)
+    {
+        return;
+    }
+
+    switch (active_usb_mode)
     {
         case USB_MODE_GENERIC:
-            if (report[0] == 0x01)
+            if ((report[0] == 0x01) || (report[0] == 0x02))
             {
-                usb_clear = true;
+                usb_process_data();
             }
             break;
 
         default:
         case USB_MODE_NS:
         case USB_MODE_XINPUT:
-
-            usb_clear = true;
+            if (len == NS_HID_LEN || report[0] == 0x01)
+            {
+                usb_process_data();
+            }
 
             break;
 
         case USB_MODE_GC:
             if (report[0] == 0x21)
             {
-                usb_clear = true;
+                usb_process_data();
             }
             break;
     }
@@ -631,7 +634,7 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint8_t
 // received data on OUT endpoint ( Report ID = 0, Type = 0 )
 void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t const* buffer, uint16_t bufsize)
 {
-    switch (adapter_settings.adapter_mode)
+    switch (active_usb_mode)
     {
         default:
 
@@ -654,25 +657,11 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_
             {
                 if (buffer[0] == 0x11)
                 {
-                    ESP_LOGI("RUMBLE", "Rx");
-                    for (uint8_t x = 0; x < bufsize-1; x++)
-                    {
-                        ESP_LOGI("d: ", "%X", (unsigned int) buffer[x+1]);
-                    }
-                    rx_vibrate = (buffer[1] > 0) ? VIBRATE_ON : VIBRATE_OFF;
+                    rx_vibrate = (buffer[1] > 0) ? true : false;
                 }
                 else if (buffer[0] == 0x13)
                 {
                     ESP_LOGI("INIT", "Rx");
-                    adapter_status = GCSTATUS_WORKING;
-                }
-                else
-                {
-                    ESP_LOGI("cmd", "Rx: %X", (unsigned int) buffer[0]);
-                    for (uint8_t x = 0; x < bufsize-1; x++)
-                    {
-                        ESP_LOGI("d: ", "%X", (unsigned int) buffer[x+1]);
-                    }
                 }
             }
             break;
@@ -702,7 +691,7 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_
 uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance)
 {
     (void) instance;
-    switch (adapter_settings.adapter_mode)
+    switch (active_usb_mode)
     {
         default:
         case USB_MODE_XINPUT:
@@ -871,60 +860,38 @@ esp_err_t gcusb_start(usb_mode_t mode)
         default:
         case USB_MODE_NS:
             ESP_LOGI(TAG, "NS MODE");
-            ns_input.stick_left_x = 128;
-            ns_input.stick_left_y = 128;
-            ns_input.stick_right_x = 128;
-            ns_input.stick_right_y = 128;
-            ns_input.dpad_hat = NS_HAT_CENTER;
             ESP_ERROR_CHECK(tinyusb_driver_install(&ns_cfg));
             break;
         case USB_MODE_GENERIC:
             ESP_LOGI(TAG, "DINPUT MODE");
-            di_input.stick_left_x = 128;
-            di_input.stick_left_y = 128;
-            di_input.stick_right_x = 128;
-            di_input.stick_right_y = 128;
-            di_input.analog_trigger_l = 0;
-            di_input.analog_trigger_r = 0;
-            di_input.dpad_hat = NS_HAT_CENTER;
             ESP_ERROR_CHECK(tinyusb_driver_install(&di_cfg));
             break;
         case USB_MODE_GC:
-            gc_input.stick_x = 128;
-            gc_input.stick_y = 128;
-            gc_input.cstick_x = 128;
-            gc_input.cstick_y = 128;
-            gc_input.trigger_l = 0;
-            gc_input.trigger_r = 0;
             ESP_LOGI(TAG, "GCC MODE");
 
             ESP_ERROR_CHECK(tinyusb_driver_install(&gc_cfg));
             break;
 
         case USB_MODE_XINPUT:
-            xi_input.stick_left_x = 128;
-            xi_input.stick_left_y = 128;
-            xi_input.stick_right_x = 128;
-            xi_input.stick_right_y = 128;
-            xi_input.analog_trigger_l = 0;
-            xi_input.analog_trigger_r = 0;
-            xi_input.dpad_hat = XI_HAT_CENTER;
             ESP_LOGI(TAG, "XINPUT MODE");
-
             ESP_ERROR_CHECK(tinyusb_driver_install(&xi_cfg));
             break;
     }
 
-    if (mode != USB_MODE_GC)
+    while(!tud_mounted())
     {
-        adapter_status = GCSTATUS_WORKING;
+        vTaskDelay(1/portTICK_PERIOD_MS);
     }
-    return ESP_OK;
-}
+    vTaskDelay(500/portTICK_PERIOD_MS);
 
-void gcusb_stop()
-{
-    adapter_status = GCSTATUS_IDLE;
+    while (!tud_hid_ready())
+    {
+        vTaskDelay(1/portTICK_PERIOD_MS);
+    }
+    usb_phase = GC_USB_OK;
+    usb_send_data();
+
+    return ESP_OK;
 }
 
 int adj_x;
@@ -934,379 +901,550 @@ int adj_cy;
 int adj_tl;
 int adj_tr;
 
-void gcusb_send_data(bool repeat)
+void dinput_send_data(void)
 {
-    if (adapter_status == GCSTATUS_IDLE)
+    di_input.report_id = 0x01;
+
+    if (cmd_phase != CMD_PHASE_POLL)
     {
-        return;
+        di_input.buttons_1 = 0x00;
+        di_input.buttons_2 = 0x00;
+        di_input.dpad_hat = NS_HAT_CENTER;
+        di_input.stick_left_x = 128;
+        di_input.stick_left_y = 128;
+        di_input.stick_right_x = 128;
+        di_input.stick_right_y = 128;
+        di_input.analog_trigger_l = 0;
+        di_input.analog_trigger_r = 0;
+    }
+    else
+    {
+        // Generate the USB Data for NS mode
+        di_input.button_a = gc_poll_response.button_a;
+        di_input.button_b = gc_poll_response.button_b;
+        di_input.button_y = gc_poll_response.button_y;
+
+        if (adapter_settings.di_zjump)
+        {
+            di_input.button_x       = gc_poll_response.button_z;
+            di_input.trigger_r       = gc_poll_response.button_x;
+        }
+        else
+        {
+            di_input.button_x       = gc_poll_response.button_x;
+            di_input.trigger_r       = gc_poll_response.button_z;
+        }
+
+        uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
+        di_input.button_home = !util_getbit(regread, NEXT_BUTTON);
+        di_input.button_capture = !util_getbit(regread, PREV_BUTTON);
+
+        uint8_t lr = 1 - gc_poll_response.dpad_left + gc_poll_response.dpad_right;
+        uint8_t ud = 1 - gc_poll_response.dpad_down + gc_poll_response.dpad_up;
+
+        di_input.dpad_hat = dir_to_hat(HAT_MODE_NS, lr, ud);
+
+        di_input.button_plus = gc_poll_response.button_start;
+
+        // Get origin modified Trigger analog data
+        adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
+        adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
+
+        switch( adapter_settings.di_trigger_l)
+        {
+            default:
+            case TRIG_MODE_OFF:
+                di_input.analog_trigger_l   = scale_trigger(adj_tl);
+                di_input.trigger_zl         = gc_poll_response.button_l;
+                break;
+            
+            case TRIG_MODE_A2D:
+                di_input.analog_trigger_l   = (adj_tl >= adapter_settings.trigger_threshold_l) ? 255 : scale_trigger(adj_tl);
+                di_input.trigger_zl         = (adj_tl >= adapter_settings.trigger_threshold_l) ? 1 : 0;
+                break;
+
+            case TRIG_MODE_D2ALITE:
+                di_input.analog_trigger_l   = (gc_poll_response.button_l) ? 85 : 0;
+                di_input.trigger_zl         = 0;
+                break;
+            
+            case TRIG_MODE_D2AFULL:
+                di_input.analog_trigger_l   = (gc_poll_response.button_l) ? 255 : 0;
+                di_input.trigger_zl         = gc_poll_response.button_l;
+                break;
+        }
+
+        switch( adapter_settings.di_trigger_r)
+        {
+            default:
+            case TRIG_MODE_OFF:
+                di_input.analog_trigger_r   = scale_trigger(adj_tr);
+                di_input.trigger_zr         = gc_poll_response.button_r;
+                break;
+            
+            case TRIG_MODE_A2D:
+                di_input.analog_trigger_r   = (adj_tr >= adapter_settings.trigger_threshold_r) ? 255 : scale_trigger(adj_tr);
+                di_input.trigger_zr         = (adj_tr >= adapter_settings.trigger_threshold_r) ? 1 : 0;
+                break;
+
+            case TRIG_MODE_D2ALITE:
+                di_input.analog_trigger_r   = (gc_poll_response.button_r) ? 85 : 0;
+                di_input.trigger_zr         = 0;
+                break;
+            
+            case TRIG_MODE_D2AFULL:
+                di_input.analog_trigger_r   = (gc_poll_response.button_r) ? 255 : 0;
+                di_input.trigger_zr         = gc_poll_response.button_r;
+                break;
+        }
+        
+        adj_x   = (int) gc_poll_response.stick_x - gc_origin_data.stick_x;
+        adj_y   = (int) gc_poll_response.stick_y - gc_origin_data.stick_y;
+        adj_cx  = (int) gc_poll_response.cstick_x - gc_origin_data.cstick_x;
+        adj_cy  = (int) gc_poll_response.cstick_y - gc_origin_data.cstick_y;
+
+        di_input.stick_left_x   = (uint8_t) adj_x;
+        di_input.stick_left_y   = (uint8_t) adj_y;
+        di_input.stick_right_x  = (uint8_t) adj_cx;
+        di_input.stick_right_y  = (uint8_t) adj_cy;
+    }
+    
+    tud_hid_report(0, &di_input, DI_HID_LEN);
+}
+
+void xinput_send_data(void)
+{
+    xi_input.report_id = 0x01;
+
+    if (cmd_phase != CMD_PHASE_POLL)
+    {
+        xi_input.dpad_hat = XI_HAT_CENTER;
+        xi_input.buttons_1 = 0x00;
+        xi_input.buttons_2 = 0x00;
+        xi_input.stick_left_x = 32768;
+        xi_input.stick_left_y = 32768;
+        xi_input.stick_right_x = 32768;
+        xi_input.stick_right_y = 32768;
+        xi_input.analog_trigger_l = 0;
+        xi_input.analog_trigger_r = 0;
+    }
+    else
+    {
+
+        uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
+        xi_input.button_menu = !util_getbit(regread, NEXT_BUTTON);
+        xi_input.button_back = !util_getbit(regread, PREV_BUTTON);
+
+        xi_input.button_a = gc_poll_response.button_a;
+        xi_input.button_b = gc_poll_response.button_b;
+        xi_input.button_y = gc_poll_response.button_y;
+
+        if (adapter_settings.xi_zjump)
+        {
+            xi_input.button_x       = gc_poll_response.button_z;
+            xi_input.bumper_r       = gc_poll_response.button_x;
+        }
+        else
+        {
+            xi_input.button_x       = gc_poll_response.button_x;
+            xi_input.bumper_r       = gc_poll_response.button_z;
+        }
+
+        if (gc_poll_response.button_start && gc_poll_response.button_z)
+        {
+            xi_input.bumper_l = 1;
+            xi_input.bumper_r = 0;
+            xi_input.button_x = 0;
+        }
+        else if (gc_poll_response.button_start)
+        {
+            xi_input.button_menu = 1;
+        }
+
+        adj_x   = (int) gc_poll_response.stick_x         - gc_origin_data.stick_x;
+        adj_y   = 256 - ((int) gc_poll_response.stick_y  - gc_origin_data.stick_y);
+        adj_cx  = (int) gc_poll_response.cstick_x        - gc_origin_data.cstick_x;
+        adj_cy  = 256 - ((int) gc_poll_response.cstick_y - gc_origin_data.cstick_y);
+
+        adj_tl  = (int) gc_poll_response.trigger_l       - gc_origin_data.trigger_l;
+        adj_tr  = (int) gc_poll_response.trigger_r       - gc_origin_data.trigger_r;
+
+        switch( adapter_settings.xi_trigger_l)
+        {
+            default:
+            case TRIG_MODE_OFF:
+                xi_input.analog_trigger_l = (uint16_t) scale_trigger(adj_tl)<<2;
+                break;
+            
+            case TRIG_MODE_A2D:
+                xi_input.analog_trigger_l   = (adj_tl >= adapter_settings.trigger_threshold_l) ? (255<<2) : (uint16_t) scale_trigger(adj_tl)<<2;
+                break;
+        }
+
+        switch( adapter_settings.xi_trigger_r)
+        {
+            default:
+            case TRIG_MODE_OFF:
+                xi_input.analog_trigger_r = (uint16_t) scale_trigger(adj_tr)<<2;
+                break;
+            
+            case TRIG_MODE_A2D:
+                xi_input.analog_trigger_r   = (adj_tr >= adapter_settings.trigger_threshold_r) ? (255<<2) : (uint16_t) scale_trigger(adj_tr)<<2;
+                break;
+        }
+
+        xi_input.stick_left_x   = (uint16_t) scale_axis(adj_x)  << 8;
+        xi_input.stick_left_y   = (uint16_t) scale_axis(adj_y)  << 8;
+        xi_input.stick_right_x  = (uint16_t) scale_axis(adj_cx) << 8;
+        xi_input.stick_right_y  = (uint16_t) scale_axis(adj_cy) << 8;
+
+        uint8_t lr = 1 - gc_poll_response.dpad_left + gc_poll_response.dpad_right;
+        uint8_t ud = 1 - gc_poll_response.dpad_down + gc_poll_response.dpad_up;
+
+        xi_input.dpad_hat = dir_to_hat(HAT_MODE_XI, lr, ud);
     }
 
-    switch (adapter_settings.adapter_mode)
+    tud_hid_report(0, &xi_input, XI_HID_LEN);
+
+}
+
+bool gc_first = false;
+void gc_send_data(void)
+{
+    if (cmd_phase != CMD_PHASE_POLL)
+    {
+        gc_input.buttons_1 = 0x00;
+        gc_input.buttons_2 = 0x00;
+        gc_input.stick_x = 128;
+        gc_input.stick_y = 128;
+        gc_input.cstick_x = 128;
+        gc_input.cstick_y = 128;
+        gc_input.trigger_l = 0;
+        gc_input.trigger_r = 0;
+    }
+    else
+    {
+        // Generate the USB Data for GameCube native mode
+        gc_input.button_a   = gc_poll_response.button_a;
+        gc_input.button_b   = gc_poll_response.button_b;
+        gc_input.button_y   = gc_poll_response.button_y;
+
+        gc_input.dpad_down  = gc_poll_response.dpad_down;
+        gc_input.dpad_up    = gc_poll_response.dpad_up;
+        gc_input.dpad_left  = gc_poll_response.dpad_left;
+        gc_input.dpad_right = gc_poll_response.dpad_right;
+
+        gc_input.button_start   = gc_poll_response.button_start;
+
+        if (adapter_settings.gc_zjump)
+        {
+            gc_input.button_x       = gc_poll_response.button_z;
+            gc_input.button_z       = gc_poll_response.button_x;
+        }
+        else
+        {
+            gc_input.button_x       = gc_poll_response.button_x;
+            gc_input.button_z       = gc_poll_response.button_z;
+        }
+
+        adj_tl  = (int) gc_poll_response.trigger_l  - gc_origin_data.trigger_l;
+        adj_tr  = (int) gc_poll_response.trigger_r  - gc_origin_data.trigger_r;
+
+        switch( adapter_settings.gc_trigger_l)
+        {
+            default:
+            case TRIG_MODE_OFF:
+                gc_input.trigger_l          = scale_trigger(adj_tl);
+                gc_input.button_l           = gc_poll_response.button_l;
+                break;
+            
+            case TRIG_MODE_A2D:
+                gc_input.trigger_l          = (adj_tl >= adapter_settings.trigger_threshold_l) ? 255 : scale_trigger(adj_tl);
+                gc_input.button_l           = (adj_tl >= adapter_settings.trigger_threshold_l) ? 1 : 0;
+                break;
+
+            case TRIG_MODE_D2ALITE:
+                gc_input.trigger_l          = (gc_poll_response.button_l) ? 85 : 0;
+                gc_input.button_l           = 0;
+                break;
+            
+            case TRIG_MODE_D2AFULL:
+                gc_input.trigger_l          = (gc_poll_response.button_l) ? 255 : 0;
+                gc_input.button_l           = gc_poll_response.button_l;
+                break;
+        }
+
+        switch( adapter_settings.gc_trigger_r)
+        {
+            default:
+            case TRIG_MODE_OFF:
+                gc_input.trigger_r      = scale_trigger(adj_tr);
+                gc_input.button_r       = gc_poll_response.button_r;
+                break;
+            
+            case TRIG_MODE_A2D:
+                gc_input.trigger_r      = (adj_tr >= adapter_settings.trigger_threshold_r) ? 255 : scale_trigger(adj_tr);
+                gc_input.button_r       = (adj_tr >= adapter_settings.trigger_threshold_r) ? 1 : 0;
+                break;
+
+            case TRIG_MODE_D2ALITE:
+                gc_input.trigger_r          = (gc_poll_response.button_r) ? 85 : 0;
+                gc_input.button_r           = 0;
+                break;
+            
+            case TRIG_MODE_D2AFULL:
+                gc_input.trigger_r          = (gc_poll_response.button_r) ? 255 : 0;
+                gc_input.button_r           = gc_poll_response.button_r;
+                break;
+        }
+
+        adj_x   = (int) gc_poll_response.stick_x    - gc_origin_data.stick_x;
+        adj_y   = (int) gc_poll_response.stick_y    - gc_origin_data.stick_y;
+        adj_cx  = (int) gc_poll_response.cstick_x   - gc_origin_data.cstick_x;
+        adj_cy  = (int) gc_poll_response.cstick_y   - gc_origin_data.cstick_y;
+
+        gc_input.stick_x        = (uint8_t) adj_x;
+        gc_input.stick_y        = (uint8_t) adj_y;
+        gc_input.cstick_x       = (uint8_t) adj_cx;
+        gc_input.cstick_y       = (uint8_t) adj_cy;
+    }
+    
+
+    if (!gc_first)
+    {
+        /*GC adapter notes for new data
+        
+        with only black USB plugged in
+        - no controller, byte 1 is 0
+        - controller plugged in to port 1, byte 1 is 0x10
+        - controller plugged in port 2, byte 10 is 0x10
+
+        with both USB plugged in
+        - no controller, byte 1 is 0x04
+        - controller plugged in to port 1, byte is 0x14 */
+        gc_buffer[1] = 0x14;
+        gc_buffer[10] = 0x04;
+        gc_buffer[19] = 0x04;
+        gc_buffer[28] = 0x04;
+        gc_first = true;
+    }
+    else
+    {
+        memcpy(&gc_buffer[2], &gc_input, 8);
+    }
+    
+    gc_buffer[0] = 0x21;
+
+    tud_hid_report(0, &gc_buffer, GC_HID_LEN);
+}
+
+
+void ns_send_data(void)
+{
+    if (cmd_phase != CMD_PHASE_POLL)
+    {
+        ns_input.buttons_1      = 0x00;
+        ns_input.buttons_2      = 0x00;
+        ns_input.dpad_hat       = NS_HAT_CENTER;
+        ns_input.stick_left_x   = 128;
+        ns_input.stick_left_y   = 128;
+        ns_input.stick_right_x  = 128;
+        ns_input.stick_left_y   = 128;
+    }
+    else
+    {
+
+        ns_input.button_a = gc_poll_response.button_a;
+        ns_input.button_b = gc_poll_response.button_b;
+        ns_input.button_x = gc_poll_response.button_x;
+        ns_input.button_y = gc_poll_response.button_y;
+
+        if (adapter_settings.ns_zjump)
+        {
+            ns_input.button_x       = gc_poll_response.button_z;
+            ns_input.trigger_r       = gc_poll_response.button_x;
+        }
+        else
+        {
+            ns_input.button_x       = gc_poll_response.button_x;
+            ns_input.trigger_r       = gc_poll_response.button_z;
+        }
+
+        uint8_t lr = 1 - gc_poll_response.dpad_left + gc_poll_response.dpad_right;
+        uint8_t ud = 1 - gc_poll_response.dpad_down + gc_poll_response.dpad_up;
+
+        ns_input.dpad_hat = dir_to_hat(HAT_MODE_NS, lr, ud);
+
+        uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
+        ns_input.button_home = !util_getbit(regread, NEXT_BUTTON);
+        ns_input.button_capture = !util_getbit(regread, PREV_BUTTON);
+
+        ns_input.button_plus = gc_poll_response.button_start;
+
+        adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
+        adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
+
+        switch( adapter_settings.ns_trigger_l)
+        {
+            default:
+            case TRIG_MODE_OFF:
+                ns_input.trigger_zl = gc_poll_response.button_l;
+                break;
+            
+            case TRIG_MODE_A2D:
+                ns_input.trigger_zl = (adj_tl >= adapter_settings.trigger_threshold_l) ? 1 : 0;
+                break;
+        }
+
+        switch( adapter_settings.ns_trigger_r)
+        {
+            default:
+            case TRIG_MODE_OFF:
+                ns_input.trigger_zr = gc_poll_response.button_r;
+                break;
+            
+            case TRIG_MODE_A2D:
+                ns_input.trigger_zr = (adj_tr >= adapter_settings.trigger_threshold_r) ? 1 : 0;
+                break;
+        }
+        
+        adj_x   = (int) gc_poll_response.stick_x - gc_origin_data.stick_x;
+        adj_y   = 256 - ( (int) gc_poll_response.stick_y - gc_origin_data.stick_y );
+        adj_cx  = (int) gc_poll_response.cstick_x - gc_origin_data.cstick_x;
+        adj_cy  = 256 - ( (int) gc_poll_response.cstick_y - gc_origin_data.cstick_y ); 
+
+        ns_input.stick_left_x   = scale_axis(adj_x);
+        ns_input.stick_left_y   = scale_axis(adj_y);
+        ns_input.stick_right_x  = scale_axis(adj_cx);
+        ns_input.stick_right_y  = scale_axis(adj_cy);
+    }
+
+    tud_hid_report(0, &ns_input, NS_HID_LEN);
+}
+
+
+void usb_send_data(void)
+{
+    // Send USB data according to the adapter mode
+    switch (active_usb_mode)
     {
         default:
         case USB_MODE_GENERIC:
-            di_input.report_id = 0x01;
-            if (!repeat)
-            {
-                // Generate the USB Data for NS mode
-                di_input.button_a = gc_poll_response.button_a;
-                di_input.button_b = gc_poll_response.button_b;
-                di_input.button_x = gc_poll_response.button_x;
-                di_input.button_y = gc_poll_response.button_y;
-
-                uint8_t lr = 1 - gc_poll_response.dpad_left + gc_poll_response.dpad_right;
-                uint8_t ud = 1 - gc_poll_response.dpad_down + gc_poll_response.dpad_up;
-
-                di_input.dpad_hat = dir_to_hat(HAT_MODE_NS, lr, ud);
-
-                di_input.button_plus = gc_poll_response.button_start;
-
-                di_input.trigger_r = gc_poll_response.button_z;
-
-                // Get origin modified Trigger analog data
-                adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
-                adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
-
-                switch( adapter_settings.di_trigger_l)
-                {
-                    default:
-                    case TRIG_MODE_OFF:
-                        di_input.analog_trigger_l   = scale_trigger(adj_tl);
-                        di_input.trigger_zl         = gc_poll_response.button_l;
-                        break;
-                    
-                    case TRIG_MODE_A2D:
-                        di_input.analog_trigger_l   = (adj_tl >= adapter_settings.trigger_threshold_l) ? 255 : scale_trigger(adj_tl);
-                        di_input.trigger_zl         = (adj_tl >= adapter_settings.trigger_threshold_l) ? 1 : 0;
-                        break;
-
-                    case TRIG_MODE_D2ALITE:
-                        di_input.analog_trigger_l   = (gc_poll_response.button_l) ? 85 : 0;
-                        di_input.trigger_zl         = 0;
-                        break;
-                    
-                    case TRIG_MODE_D2AFULL:
-                        di_input.analog_trigger_l   = (gc_poll_response.button_l) ? 255 : 0;
-                        di_input.trigger_zl         = gc_poll_response.button_l;
-                        break;
-                }
-
-                switch( adapter_settings.di_trigger_r)
-                {
-                    default:
-                    case TRIG_MODE_OFF:
-                        di_input.analog_trigger_r   = scale_trigger(adj_tr);
-                        di_input.trigger_zr         = gc_poll_response.button_r;
-                        break;
-                    
-                    case TRIG_MODE_A2D:
-                        di_input.analog_trigger_r   = (adj_tr >= adapter_settings.trigger_threshold_r) ? 255 : scale_trigger(adj_tr);
-                        di_input.trigger_zr         = (adj_tr >= adapter_settings.trigger_threshold_r) ? 1 : 0;
-                        break;
-
-                    case TRIG_MODE_D2ALITE:
-                        di_input.analog_trigger_r   = (gc_poll_response.button_r) ? 85 : 0;
-                        di_input.trigger_zr         = 0;
-                        break;
-                    
-                    case TRIG_MODE_D2AFULL:
-                        di_input.analog_trigger_r   = (gc_poll_response.button_r) ? 255 : 0;
-                        di_input.trigger_zr         = gc_poll_response.button_r;
-                        break;
-                }
-                
-                adj_x   = (int) gc_poll_response.stick_x - gc_origin_data.stick_x;
-                adj_y   = (int) gc_poll_response.stick_y - gc_origin_data.stick_y;
-                adj_cx  = (int) gc_poll_response.cstick_x - gc_origin_data.cstick_x;
-                adj_cy  = (int) gc_poll_response.cstick_y - gc_origin_data.cstick_y;
-
-                di_input.stick_left_x   = (uint8_t) adj_x;
-                di_input.stick_left_y   = (uint8_t) adj_y;
-                di_input.stick_right_x  = (uint8_t) adj_cx;
-                di_input.stick_right_y  = (uint8_t) adj_cy;
-                
-            }
-
-            memcpy(&di_buffer, &di_input, DI_HID_LEN);
-            // Send USB report
-            if (usb_clear && tud_hid_ready())
-            {
-                usb_clear = false;
-                tud_hid_report(0, &di_buffer, DI_HID_LEN);
-            }
+            dinput_send_data();
             break;
         case USB_MODE_NS:
-            if (!repeat)
-            {
-                // Generate the USB Data for NS mode
-                ns_input.button_a = gc_poll_response.button_a;
-                ns_input.button_b = gc_poll_response.button_b;
-                ns_input.button_x = gc_poll_response.button_x;
-                ns_input.button_y = gc_poll_response.button_y;
-
-                uint8_t lr = 1 - gc_poll_response.dpad_left + gc_poll_response.dpad_right;
-                uint8_t ud = 1 - gc_poll_response.dpad_down + gc_poll_response.dpad_up;
-
-                ns_input.dpad_hat = dir_to_hat(HAT_MODE_NS, lr, ud);
-
-                uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
-                ns_input.button_home = !util_getbit(regread, HOME_BUTTON);
-                ns_input.button_capture = !util_getbit(regread, APP_BUTTON);
-
-                ns_input.button_plus = gc_poll_response.button_start;
-
-                ns_input.trigger_r = gc_poll_response.button_z;
-
-                adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
-                adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
-
-                switch( adapter_settings.ns_trigger_l)
-                {
-                    default:
-                    case TRIG_MODE_OFF:
-                        ns_input.trigger_zl = gc_poll_response.button_l;
-                        break;
-                    
-                    case TRIG_MODE_A2D:
-                        ns_input.trigger_zl = (adj_tl >= adapter_settings.trigger_threshold_l) ? 1 : 0;
-                        break;
-                }
-
-                switch( adapter_settings.ns_trigger_r)
-                {
-                    default:
-                    case TRIG_MODE_OFF:
-                        ns_input.trigger_zr = gc_poll_response.button_r;
-                        break;
-                    
-                    case TRIG_MODE_A2D:
-                        ns_input.trigger_zr = (adj_tr >= adapter_settings.trigger_threshold_r) ? 1 : 0;
-                        break;
-                }
-                
-                adj_x   = (int) gc_poll_response.stick_x - gc_origin_data.stick_x;
-                adj_y   = 256 - ( (int) gc_poll_response.stick_y - gc_origin_data.stick_y );
-                adj_cx  = (int) gc_poll_response.cstick_x - gc_origin_data.cstick_x;
-                adj_cy  = 256 - ( (int) gc_poll_response.cstick_y - gc_origin_data.cstick_y ); 
-
-                ns_input.stick_left_x   = scale_axis(adj_x);
-                ns_input.stick_left_y   = scale_axis(adj_y);
-                ns_input.stick_right_x  = scale_axis(adj_cx);
-                ns_input.stick_right_y  = scale_axis(adj_cy);
-                
-            }
-            
-            memcpy(&ns_buffer, &ns_input, NS_HID_LEN);
-            // Send USB report
-            if (usb_clear && tud_hid_ready())
-            {
-                usb_clear = false;
-                tud_hid_report(0, &ns_buffer, NS_HID_LEN);
-            }
-            
+            ns_send_data();
             break;
         case USB_MODE_GC:
-            if (!repeat)
-            {
-                // Generate the USB Data for GameCube native mode
-                gc_input.button_a   = gc_poll_response.button_a;
-                gc_input.button_b   = gc_poll_response.button_b;
-                gc_input.button_x   = gc_poll_response.button_x;
-                gc_input.button_y   = gc_poll_response.button_y;
-
-                gc_input.dpad_down  = gc_poll_response.dpad_down;
-                gc_input.dpad_up    = gc_poll_response.dpad_up;
-                gc_input.dpad_left  = gc_poll_response.dpad_left;
-                gc_input.dpad_right = gc_poll_response.dpad_right;
-
-                gc_input.button_start   = gc_poll_response.button_start;
-                gc_input.button_z       = gc_poll_response.button_z;
-
-                adj_tl  = (int) gc_poll_response.trigger_l  - gc_origin_data.trigger_l;
-                adj_tr  = (int) gc_poll_response.trigger_r  - gc_origin_data.trigger_r;
-
-                switch( adapter_settings.gc_trigger_l)
-                {
-                    default:
-                    case TRIG_MODE_OFF:
-                        gc_input.trigger_l          = scale_trigger(adj_tl);
-                        gc_input.button_l           = gc_poll_response.button_l;
-                        break;
-                    
-                    case TRIG_MODE_A2D:
-                        gc_input.trigger_l          = (adj_tl >= adapter_settings.trigger_threshold_l) ? 255 : scale_trigger(adj_tl);
-                        gc_input.button_l           = (adj_tl >= adapter_settings.trigger_threshold_l) ? 1 : 0;
-                        break;
-
-                    case TRIG_MODE_D2ALITE:
-                        gc_input.trigger_l          = (gc_poll_response.button_l) ? 85 : 0;
-                        gc_input.button_l           = 0;
-                        break;
-                    
-                    case TRIG_MODE_D2AFULL:
-                        gc_input.trigger_l          = (gc_poll_response.button_l) ? 255 : 0;
-                        gc_input.button_l           = gc_poll_response.button_l;
-                        break;
-                }
-
-                switch( adapter_settings.gc_trigger_r)
-                {
-                    default:
-                    case TRIG_MODE_OFF:
-                        gc_input.trigger_r      = scale_trigger(adj_tr);
-                        gc_input.button_r       = gc_poll_response.button_r;
-                        break;
-                    
-                    case TRIG_MODE_A2D:
-                        gc_input.trigger_r      = (adj_tr >= adapter_settings.trigger_threshold_r) ? 255 : scale_trigger(adj_tr);
-                        gc_input.button_r       = (adj_tr >= adapter_settings.trigger_threshold_r) ? 1 : 0;
-                        break;
-
-                    case TRIG_MODE_D2ALITE:
-                        gc_input.trigger_r          = (gc_poll_response.button_r) ? 85 : 0;
-                        gc_input.button_r           = 0;
-                        break;
-                    
-                    case TRIG_MODE_D2AFULL:
-                        gc_input.trigger_r          = (gc_poll_response.button_r) ? 255 : 0;
-                        gc_input.button_r           = gc_poll_response.button_r;
-                        break;
-                }
-
-                adj_x   = (int) gc_poll_response.stick_x    - gc_origin_data.stick_x;
-                adj_y   = (int) gc_poll_response.stick_y    - gc_origin_data.stick_y;
-                adj_cx  = (int) gc_poll_response.cstick_x   - gc_origin_data.cstick_x;
-                adj_cy  = (int) gc_poll_response.cstick_y   - gc_origin_data.cstick_y;
-
-                gc_input.stick_x        = (uint8_t) adj_x;
-                gc_input.stick_y        = (uint8_t) adj_y;
-                gc_input.cstick_x       = (uint8_t) adj_cx;
-                gc_input.cstick_y       = (uint8_t) adj_cy;
-                
-            }
-
-            if (first)
-            {
-                memcpy(&gc_buffer[2], &gc_input, 8);
-
-                /*GC adapter notes for new data
-                
-                with only black USB plugged in
-                - no controller, byte 1 is 0
-                - controller plugged in to port 1, byte 1 is 0x10
-                - controller plugged in port 2, byte 10 is 0x10
-
-                with both USB plugged in
-                - no controller, byte 1 is 0x04
-                - controller plugged in to port 1, byte is 0x14 */
-                gc_buffer[1] = 0x14;
-                gc_buffer[10] = 0x04;
-                gc_buffer[19] = 0x04;
-                gc_buffer[28] = 0x04;
-            }
-            
-            gc_buffer[0] = 0x21;
-
-            if (usb_clear && tud_hid_ready())
-            {
-                usb_clear = false;
-                if (tud_hid_report(0, &gc_buffer, GC_HID_LEN))
-                {
-                    first = true;
-                }
-                else
-                {
-                    ESP_LOGE("USB", "Failed send");
-                }
-            }
-            
+            gc_send_data();
             break;
-
         case USB_MODE_XINPUT:
-            xi_input.report_id = 0x01;
-            if (!repeat)
-            {
-
-                if (gc_poll_response.button_start && gc_poll_response.button_a)
-                {
-                    xi_input.button_menu = 1;
-                }
-                else if (gc_poll_response.button_start && gc_poll_response.button_b)
-                {
-                    xi_input.button_back = 1;
-                }
-                else
-                {
-                    xi_input.button_a = gc_poll_response.button_a;
-                    xi_input.button_b = gc_poll_response.button_b;
-                    xi_input.button_x = gc_poll_response.button_x;
-                    xi_input.button_y = gc_poll_response.button_y;
-                    if (gc_poll_response.button_start && gc_poll_response.button_z)
-                    {
-                        xi_input.bumper_l = 1;
-                    }
-                    else
-                    {
-                        xi_input.bumper_r = gc_poll_response.button_z;
-                        xi_input.bumper_l = 0;
-                    }
-                    
-
-                    xi_input.button_menu   = 0;
-                    xi_input.button_back    = 0;
-                }
-
-                adj_x   = (int) gc_poll_response.stick_x         - gc_origin_data.stick_x;
-                adj_y   = 256 - ((int) gc_poll_response.stick_y  - gc_origin_data.stick_y);
-                adj_cx  = (int) gc_poll_response.cstick_x        - gc_origin_data.cstick_x;
-                adj_cy  = 256 - ((int) gc_poll_response.cstick_y - gc_origin_data.cstick_y);
-
-                adj_tl  = (int) gc_poll_response.trigger_l       - gc_origin_data.trigger_l;
-                adj_tr  = (int) gc_poll_response.trigger_r       - gc_origin_data.trigger_r;
-
-                switch( adapter_settings.xi_trigger_l)
-                {
-                    default:
-                    case TRIG_MODE_OFF:
-                        xi_input.analog_trigger_l = (uint16_t) scale_trigger(adj_tl)<<2;
-                        break;
-                    
-                    case TRIG_MODE_A2D:
-                        xi_input.analog_trigger_l   = (adj_tl >= adapter_settings.trigger_threshold_l) ? (255<<2) : (uint16_t) scale_trigger(adj_tl)<<2;
-                        break;
-                }
-
-                switch( adapter_settings.xi_trigger_r)
-                {
-                    default:
-                    case TRIG_MODE_OFF:
-                        xi_input.analog_trigger_r = (uint16_t) scale_trigger(adj_tr)<<2;
-                        break;
-                    
-                    case TRIG_MODE_A2D:
-                        xi_input.analog_trigger_r   = (adj_tr >= adapter_settings.trigger_threshold_r) ? (255<<2) : (uint16_t) scale_trigger(adj_tr)<<2;
-                        break;
-                }
-
-                xi_input.stick_left_x   = (uint16_t) scale_axis(adj_x)  << 8;
-                xi_input.stick_left_y   = (uint16_t) scale_axis(adj_y)  << 8;
-                xi_input.stick_right_x  = (uint16_t) scale_axis(adj_cx) << 8;
-                xi_input.stick_right_y  = (uint16_t) scale_axis(adj_cy) << 8;
-
-                uint8_t lr = 1 - gc_poll_response.dpad_left + gc_poll_response.dpad_right;
-                uint8_t ud = 1 - gc_poll_response.dpad_down + gc_poll_response.dpad_up;
-
-                xi_input.dpad_hat = dir_to_hat(HAT_MODE_XI, lr, ud);
-            }
-            
-            if (usb_clear && tud_ready())
-            {
-                memcpy(xi_buffer, &xi_input, sizeof(xi_input_s));
-                usb_clear = false;
-                tud_hid_report(0, xi_buffer, XI_HID_LEN);
-            }
-            
+            xinput_send_data();
             break;
-
     }
+}
+
+#define TIMEOUT_GC 450
+#define TIMEOUT_COUNTS 10
+uint64_t usb_delay_time = 0;
+
+// This is called after each successfull USB report send.
+void usb_process_data(void)
+{
+    // Check if we have config data to send out
+    if(cmd_flagged)
+    {
+        command_queue_process();
+        gc_timer_stop();
+        gc_timer_reset();
+        return;
+    }
+
+    if(cmd_phase == CMD_PHASE_POLL)
+    {
+        gptimer_get_raw_count(gc_timer, &usb_delay_time);
+        if (usb_delay_time>8000)
+        {
+            usb_delay_time = 8000;
+        }
+
+        if (gc_timer_status == GC_TIMER_IDLE)
+        {
+            gc_timer_start();
+            esp_rom_delay_us(50);
+        }
+        else if (gc_timer_status == GC_TIMER_STARTED)
+        {
+            gc_timer_reset();
+            
+            esp_rom_delay_us(usb_delay_time-600); 
+        }
+    }
+    else
+    {
+        if (gc_timer_status == GC_TIMER_STARTED)
+        {
+            gc_timer_stop();
+            gc_timer_reset();
+        }
+    }
+
+    // Start RMT transaction
+    // Set the memory owner back appropriately.
+    JB_RX_MEMOWNER  = 1;
+    // Set RX to begin so it starts when sync bit is set.
+    JB_RX_BEGIN     = 1;
+    // Start next transaction.
+    JB_TX_BEGIN     = 1;
+    
+
+    while(!rx_recieved && (rx_timeout < TIMEOUT_GC))
+    {
+        esp_rom_delay_us(1);
+        rx_timeout += 1;
+    }
+
+    // If we timed out, just reset for next phase
+    if (rx_timeout >= TIMEOUT_GC)
+    {
+        rx_timeout_counts += 1;
+        if (rx_timeout_counts >= TIMEOUT_COUNTS)
+        {
+            rx_timeout_counts = 0;
+            cmd_phase = CMD_PHASE_PROBE;
+            rgb_animate_to(COLOR_RED);
+            memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
+        }
+        rx_timeout = 0;
+
+        JB_RX_SYNC      = 0;
+        JB_RX_MEMOWNER  = 1;
+        JB_RX_RDRST     = 1;
+        JB_RX_RDRST     = 0;
+        JB_RX_BEGIN     = 0;
+        JB_RX_SYNC      = 1;
+        JB_RX_CLEARISR  = 1;
+        JB_RX_BEGIN     = 1;
+
+        JB_TX_SYNC      = 0;
+        JB_TX_STOP      = 1;
+        JB_TX_RDRST     = 1;
+        JB_TX_WRRST     = 1;
+        JB_TX_CLEARISR  = 1;
+        JB_TX_SYNC      = 1;
+        JB_TX_SYNC      = 0;
+        JB_TX_STOP      = 1;
+        JB_TX_SYNC      = 1;
+        JB_TX_SYNC      = 0;
+    }
+    else if (rx_recieved)
+    {
+        rx_recieved = false;
+        rx_timeout = 0;
+        // Process our data if we received something
+        // from the gamecube controller
+        gamecube_rmt_process();
+    }
+    
+    usb_send_data();
 }

@@ -2,10 +2,16 @@
 #define ADAPTER_INCLUDES_H
 
 #define ADAPTER_DEBUG_ENABLE 0
-#define APP_BUTTON (GPIO_NUM_0) // Use BOOT signal by default
-#define HOME_BUTTON (GPIO_NUM_4)
+#define NEXT_BUTTON (GPIO_NUM_0) // Use BOOT signal by default
+#define PREV_BUTTON (GPIO_NUM_4)
 
-#define PIN_MASK_GCP ( (1ULL << APP_BUTTON) | (1ULL << HOME_BUTTON))
+
+#define LED_BUTTON_PIN (GPIO_NUM_9)
+#define LED_USB_PIN (GPIO_NUM_10)
+
+#define LED_PIN_MASK ( (1ULL << LED_BUTTON_PIN) | (1ULL << LED_USB_PIN) ) 
+
+#define PIN_MASK_GCP ( (1ULL << NEXT_BUTTON) | (1ULL << PREV_BUTTON))
 
 // Generics
 #include <stdlib.h>
@@ -23,6 +29,8 @@
 #include "esp_private/gdma.h"
 #include "esp_check.h"
 #include "rom/ets_sys.h"
+#include "esp_rom_sys.h"
+#include "driver/gptimer.h"
 
 // USB
 #include "tinyusb.h"
@@ -39,10 +47,12 @@
 
 // Project
 #include "sdkconfig.h"
+#include "adapter_types.h"
 #include "gc.h"
 #include "rmt_gc.h"
 #include "descriptors.h"
 #include "util_usb.h"
+#include "gc_timer.h"
 #include "adapter_memory.h"
 #include "command_handler.h"
 #include "util_common.h"

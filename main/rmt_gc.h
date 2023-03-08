@@ -27,7 +27,7 @@ extern legacy_rmt_mem_t RMTMEM;
 #define JB_1H_TICKS     15
 #define JB_STOP_TICKS   7
 
-#define JB_IDLE_TICKS   100
+#define JB_IDLE_TICKS   45
 
 #define JB_LOW      (rmt_item32_t) {{{ JB_0L_TICKS,      0, JB_0H_TICKS, 1 }}}
 #define JB_HIGH     (rmt_item32_t) {{{ JB_1L_TICKS,      0, JB_1H_TICKS, 1 }}}
@@ -63,6 +63,8 @@ extern legacy_rmt_mem_t RMTMEM;
 // Carrier Enable Ptr
 #define JB_TX_CARRIER       RMT.chnconf0[RMT_TX_CHANNEL].carrier_en_chn
 #define JB_TX_CARRIER2      RMT.chnconf0[RMT_TX_CHANNEL].carrier_eff_en_chn
+
+#define JB_TX_STOP          RMT.chnconf0[RMT_TX_CHANNEL].tx_stop_chn
 
 // Write Config Data Sync Bit
 #define JB_TX_SYNC          RMT.chnconf0[RMT_TX_CHANNEL].conf_update_chn

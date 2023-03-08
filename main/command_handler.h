@@ -4,7 +4,7 @@
 #include "adapter_includes.h"
 
 #define CMD_USB_REPORTID    0x02
-#define CMD_USB_REPORTLEN   0x0A
+#define CMD_USB_REPORTLEN   10
 
 typedef enum
 {
@@ -28,7 +28,17 @@ typedef enum
     CMD_SETTINGS_LEDBRIGHTNESS  = 0x03,
     CMD_SETTINGS_TRIGGERMODE    = 0x04,
     CMD_SETTINGS_TRIGGERSENSITIVITY = 0x05,
+    CMD_SETTINGS_ZJUMP              = 0x06,
+    CMD_SETTINGS_SETTINGVERSION     = 0x07,
+    CMD_SETTINGS_FWVERSION          = 0x08,
 } settings_cmd_t;
+
+extern bool cmd_flagged;
+extern uint8_t cmd_queue[8];
+extern uint8_t cmd_queue_idx;
+extern uint8_t cmd_buffer[CMD_USB_REPORTLEN];
+
+void command_queue_process(void);
 
 void command_handler(const uint8_t *data, uint16_t bufsize);
 

@@ -5,21 +5,6 @@
 
 typedef enum
 {
-    USB_MODE_GENERIC  = 0x00,
-    USB_MODE_NS       = 0x01,
-    USB_MODE_XINPUT   = 0x02,
-    USB_MODE_GC       = 0x03,
-    USB_MODE_MAX,
-} usb_mode_t;
-
-typedef enum
-{
-    GCSTATUS_IDLE,
-    GCSTATUS_WORKING,
-} adapter_status_t;
-
-typedef enum
-{
   NS_HAT_TOP          = 0x00,
   NS_HAT_TOP_RIGHT    = 0x01,
   NS_HAT_RIGHT        = 0x02,
@@ -51,14 +36,13 @@ typedef enum
 } hat_mode_t;
 
 extern usb_mode_t adapter_mode;
-extern adapter_status_t adapter_status;
 
 uint8_t dir_to_hat(hat_mode_t hat_type, uint8_t leftRight, uint8_t upDown);
 
 esp_err_t gcusb_start(usb_mode_t mode);
 
-void gcusb_stop();
+void usb_send_data(void);
 
-void gcusb_send_data(bool repeat);
+void usb_process_data(void);
 
 #endif
