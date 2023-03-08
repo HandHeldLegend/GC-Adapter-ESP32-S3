@@ -33,7 +33,8 @@ For simpler printing with the smaller bits, we have array components for the but
 - Web configurator to change settings
 - Adapts GameCube controllers for use on Windows, Mac, Android, and Nintendo Switch
 - Up to 1ms USB polling rate (Dependent on machine it's plugged in to)
-- 1ms controller polling rate
+- Nintendo Switch only supports 8ms polling rate (Locked by Nintendo Switch)
+- Dynamically aligned controller polling (Controller poll auto-aligns to USB poll for optimal response times)
 - RGB LED indicator light
 - Two buttons to add function to device
 
