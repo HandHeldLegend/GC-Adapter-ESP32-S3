@@ -922,17 +922,21 @@ void dinput_send_data(void)
         // Generate the USB Data for NS mode
         di_input.button_a = gc_poll_response.button_a;
         di_input.button_b = gc_poll_response.button_b;
-        di_input.button_y = gc_poll_response.button_y;
+        
+        // Defaults
+        di_input.button_y       = gc_poll_response.button_y;
+        di_input.button_x       = gc_poll_response.button_x;
+        di_input.trigger_r      = gc_poll_response.button_z;
 
-        if (adapter_settings.di_zjump)
+        if (adapter_settings.di_zjump == 1)
         {
             di_input.button_x       = gc_poll_response.button_z;
             di_input.trigger_r       = gc_poll_response.button_x;
         }
-        else
+        else if (adapter_settings.di_zjump == 2)
         {
-            di_input.button_x       = gc_poll_response.button_x;
-            di_input.trigger_r       = gc_poll_response.button_z;
+            di_input.button_y       = gc_poll_response.button_z;
+            di_input.trigger_r       = gc_poll_response.button_y;
         }
 
         uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
@@ -1037,17 +1041,21 @@ void xinput_send_data(void)
 
         xi_input.button_a = gc_poll_response.button_a;
         xi_input.button_b = gc_poll_response.button_b;
-        xi_input.button_y = gc_poll_response.button_y;
 
-        if (adapter_settings.xi_zjump)
+        //Defaults
+        xi_input.button_y       = gc_poll_response.button_y;
+        xi_input.button_x       = gc_poll_response.button_x;
+        xi_input.bumper_r       = gc_poll_response.button_z;
+
+        if (adapter_settings.xi_zjump == 1)
         {
             xi_input.button_x       = gc_poll_response.button_z;
             xi_input.bumper_r       = gc_poll_response.button_x;
         }
-        else
+        else if (adapter_settings.xi_zjump == 2)
         {
-            xi_input.button_x       = gc_poll_response.button_x;
-            xi_input.bumper_r       = gc_poll_response.button_z;
+            xi_input.button_y       = gc_poll_response.button_z;
+            xi_input.bumper_r       = gc_poll_response.button_y;
         }
 
         if (gc_poll_response.button_start && gc_poll_response.button_z)
@@ -1127,7 +1135,6 @@ void gc_send_data(void)
         // Generate the USB Data for GameCube native mode
         gc_input.button_a   = gc_poll_response.button_a;
         gc_input.button_b   = gc_poll_response.button_b;
-        gc_input.button_y   = gc_poll_response.button_y;
 
         gc_input.dpad_down  = gc_poll_response.dpad_down;
         gc_input.dpad_up    = gc_poll_response.dpad_up;
@@ -1136,15 +1143,20 @@ void gc_send_data(void)
 
         gc_input.button_start   = gc_poll_response.button_start;
 
-        if (adapter_settings.gc_zjump)
+        // Defaults
+        gc_input.button_y       = gc_poll_response.button_y;
+        gc_input.button_x       = gc_poll_response.button_x;
+        gc_input.button_z       = gc_poll_response.button_z;
+
+        if (adapter_settings.gc_zjump == 1)
         {
             gc_input.button_x       = gc_poll_response.button_z;
             gc_input.button_z       = gc_poll_response.button_x;
         }
-        else
+        else if (adapter_settings.gc_zjump == 2)
         {
-            gc_input.button_x       = gc_poll_response.button_x;
-            gc_input.button_z       = gc_poll_response.button_z;
+            gc_input.button_y       = gc_poll_response.button_z;
+            gc_input.button_z       = gc_poll_response.button_y;
         }
 
         adj_tl  = (int) gc_poll_response.trigger_l  - gc_origin_data.trigger_l;
@@ -1256,18 +1268,21 @@ void ns_send_data(void)
 
         ns_input.button_a = gc_poll_response.button_a;
         ns_input.button_b = gc_poll_response.button_b;
-        ns_input.button_x = gc_poll_response.button_x;
-        ns_input.button_y = gc_poll_response.button_y;
 
-        if (adapter_settings.ns_zjump)
+        // Defaults
+        ns_input.button_y       = gc_poll_response.button_y;
+        ns_input.button_x       = gc_poll_response.button_x;
+        ns_input.trigger_r      = gc_poll_response.button_z;
+
+        if (adapter_settings.ns_zjump == 1)
         {
             ns_input.button_x       = gc_poll_response.button_z;
             ns_input.trigger_r       = gc_poll_response.button_x;
         }
-        else
+        else if (adapter_settings.ns_zjump == 2)
         {
-            ns_input.button_x       = gc_poll_response.button_x;
-            ns_input.trigger_r       = gc_poll_response.button_z;
+            ns_input.button_y       = gc_poll_response.button_z;
+            ns_input.trigger_r       = gc_poll_response.button_y;
         }
 
         uint8_t lr = 1 - gc_poll_response.dpad_left + gc_poll_response.dpad_right;
