@@ -99,6 +99,8 @@ void load_adapter_defaults(void)
     nvs_commit(adapter_mem_handle);
     nvs_close(adapter_mem_handle);
 
+    memcpy(&adapter_settings, &default_s, sizeof(adapter_settings_s));
+
     return;
 }
 
