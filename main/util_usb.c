@@ -882,8 +882,6 @@ esp_err_t gcusb_start(usb_mode_t mode)
     {
         vTaskDelay(1/portTICK_PERIOD_MS);
     }
-    vTaskDelay(500/portTICK_PERIOD_MS);
-
     while (!tud_hid_ready())
     {
         vTaskDelay(1/portTICK_PERIOD_MS);
@@ -1382,16 +1380,19 @@ void usb_process_data(void)
         {
             usb_delay_time = 8000;
         }
+        else if (usb_delay_time < 600)
+        {
+            usb_delay_time = 900;
+        }
 
         if (gc_timer_status == GC_TIMER_IDLE)
         {
             gc_timer_start();
-            esp_rom_delay_us(50);
+            esp_rom_delay_us(200);
         }
         else if (gc_timer_status == GC_TIMER_STARTED)
         {
             gc_timer_reset();
-            
             esp_rom_delay_us(usb_delay_time-600); 
         }
     }
@@ -1402,6 +1403,7 @@ void usb_process_data(void)
             gc_timer_stop();
             gc_timer_reset();
         }
+        esp_rom_delay_us(200);
     }
 
     // Start RMT transaction
