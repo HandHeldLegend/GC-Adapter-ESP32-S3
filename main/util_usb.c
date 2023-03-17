@@ -809,6 +809,16 @@ uint8_t dir_to_hat(hat_mode_t hat_type, uint8_t leftRight, uint8_t upDown)
 uint8_t scale_axis(int input)
 {
     int res = input;
+
+    if (input > 228)
+    {
+        input = 228;
+    }
+    if (input < 28)
+    {
+        input = 28;
+    }
+
     if (input > 129)
     {
         float tmp = (float) input - 128;
@@ -1368,43 +1378,10 @@ void usb_process_data(void)
     if(cmd_flagged)
     {
         command_queue_process();
-        gc_timer_stop();
-        gc_timer_reset();
         return;
     }
 
-    if(cmd_phase == CMD_PHASE_POLL)
-    {
-        gptimer_get_raw_count(gc_timer, &usb_delay_time);
-        if (usb_delay_time>8000)
-        {
-            usb_delay_time = 8000;
-        }
-        else if (usb_delay_time < 600)
-        {
-            usb_delay_time = 900;
-        }
-
-        if (gc_timer_status == GC_TIMER_IDLE)
-        {
-            gc_timer_start();
-            esp_rom_delay_us(200);
-        }
-        else if (gc_timer_status == GC_TIMER_STARTED)
-        {
-            gc_timer_reset();
-            esp_rom_delay_us(usb_delay_time-600); 
-        }
-    }
-    else
-    {
-        if (gc_timer_status == GC_TIMER_STARTED)
-        {
-            gc_timer_stop();
-            gc_timer_reset();
-        }
-        esp_rom_delay_us(200);
-    }
+    esp_rom_delay_us(200);
 
     // Start RMT transaction
     // Set the memory owner back appropriately.
