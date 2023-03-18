@@ -7,7 +7,7 @@ rgb_s next_color = {0};
 rgb_msg_s rgb_msg_fade = {0};
 rgb_msg_s rgb_msg_blink = {0};
 
-TaskHandle_t    rgb_animator_TaskHandle;
+TaskHandle_t    rgb_animator_TaskHandle = NULL;
 QueueHandle_t   rgb_animator_Queue;
 
 bool rgb_blinking = false;
@@ -121,7 +121,7 @@ void rgb_animator_task(void * param)
             }
             
         }
-        vTaskDelay(10/portTICK_PERIOD_MS);
+        vTaskDelay(32/portTICK_PERIOD_MS);
     }
 }
 
@@ -152,7 +152,7 @@ void rgb_animate_blink(rgb_s color)
 void rgb_animator_init()
 {
     rgb_animator_Queue = xQueueCreate(10, sizeof(rgb_msg_s));
-    xTaskCreatePinnedToCore(rgb_animator_task, "RGBAnim", 2048, NULL, 4, &rgb_animator_TaskHandle, 1);
+    xTaskCreatePinnedToCore(rgb_animator_task, "rgb_task", 2048, NULL, 3, &rgb_animator_TaskHandle, 0);
 }
 
 

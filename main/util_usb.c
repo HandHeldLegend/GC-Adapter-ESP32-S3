@@ -612,8 +612,10 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint8_t
 
         default:
         case USB_MODE_NS:
+            usb_process_data();
+            break;
         case USB_MODE_XINPUT:
-            if (len == NS_HID_LEN || report[0] == 0x01)
+            if (report[0] == 0x01)
             {
                 usb_process_data();
             }
@@ -859,7 +861,7 @@ uint8_t scale_trigger(int input)
     }
 }
 
-esp_err_t gcusb_start(usb_mode_t mode)
+void gcusb_start(usb_mode_t mode)
 {
     const char* TAG = "gcusb_start";
 
@@ -890,18 +892,15 @@ esp_err_t gcusb_start(usb_mode_t mode)
 
     while(!tud_mounted())
     {
-        vTaskDelay(1/portTICK_PERIOD_MS);
+        vTaskDelay(8/portTICK_PERIOD_MS);
     }
     while (!tud_hid_ready())
     {
-        vTaskDelay(1/portTICK_PERIOD_MS);
+        vTaskDelay(8/portTICK_PERIOD_MS);
     }
-
-    vTaskDelay(250/portTICK_PERIOD_MS);
     usb_phase = GC_USB_OK;
-    usb_send_data();
 
-    return ESP_OK;
+    usb_send_data();
 }
 
 int adj_x;

@@ -111,6 +111,7 @@ esp_err_t gamecube_rmt_init(void)
     JB_RX_BEGIN     = 0;
     JB_RX_SYNC      = 1;
     JB_RX_SYNC      = 0;
+    //JB_RX_BEGIN     = 1;
 
     // Enable receipt complete interrupts
     JB_RX_ENAISR    = 1;
@@ -318,10 +319,10 @@ void adapter_mode_task(void *param)
 {
     bool mode_prev_store    = false;
     bool mode_fwd_store     = false;
+    vTaskDelay(1000/portTICK_PERIOD_MS);
 
     for(;;)
     {
-        vTaskDelay(16/portTICK_PERIOD_MS);
         if (cmd_phase == CMD_PHASE_PROBE)
         {
             uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
@@ -363,5 +364,6 @@ void adapter_mode_task(void *param)
             // Store button state
             mode_prev_store = !util_getbit(regread, PREV_BUTTON);
         }
+        vTaskDelay(32/portTICK_PERIOD_MS);
     }
 }
