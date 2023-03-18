@@ -120,6 +120,5 @@ void save_adapter_settings(void)
 
     nvs_commit(adapter_mem_handle);
     nvs_close(adapter_mem_handle);
-
     return;
 }

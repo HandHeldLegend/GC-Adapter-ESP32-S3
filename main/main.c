@@ -53,11 +53,12 @@ void app_main(void)
     {
         active_usb_mode = adapter_settings.adapter_mode;
         // Start task which will help with mode switching
-        xTaskCreatePinnedToCore(adapter_mode_task, "mode_task", 4000, NULL, 5, &mode_task_handle, 0);
+        xTaskCreatePinnedToCore(adapter_mode_task, "mode_task", 4000, NULL, 4, &mode_task_handle, 1);
     }
 
     neopixel_init(colors, SPI3_HOST);
     rgb_setbrightness(adapter_settings.led_brightness);
+    rgb_animator_init();
 
     cmd_phase = CMD_PHASE_PROBE;
 
@@ -81,7 +82,10 @@ void app_main(void)
             break;
     }
 
+    vTaskDelay(250/portTICK_PERIOD_MS);
+
     gc_timer_init();
     gamecube_rmt_init();
+    
     gcusb_start(active_usb_mode);
 }

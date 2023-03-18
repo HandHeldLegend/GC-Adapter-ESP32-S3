@@ -31,6 +31,7 @@
 #include "rom/ets_sys.h"
 #include "esp_rom_sys.h"
 #include "driver/gptimer.h"
+#include "rom/ets_sys.h"
 
 // USB
 #include "tinyusb.h"

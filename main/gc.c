@@ -50,24 +50,14 @@ static void gamecube_rmt_isr(void* arg)
     // Status when RX is completed
     else if (JB_RX_STATISR)
     {
-        // Store the receive offset address
         rx_offset       = RMT.chmstatus[0].mem_waddr_ex_chm - GC_MEM_OFFSET;
-        // set the RX timeout to 0 
         rx_timeout      = 0;
-        // Set mem owner
-        JB_RX_MEMOWNER  = 0;
+        JB_RX_MEMOWNER  = 1;
         JB_RX_RDRST     = 1;
         JB_RX_RDRST     = 0;
         JB_RX_BEGIN     = 0;
         JB_RX_SYNC      = 1;
-        JB_RX_SYNC      = 0;
-        // Clear status bit
         JB_RX_CLEARISR  = 1;
-
-        // Set vibrate bit based on received data
-        JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (rx_vibrate) ? JB_HIGH : JB_LOW;
-
-        // Set rx_received as true
         rx_recieved = true;
     }
 }
@@ -76,12 +66,16 @@ esp_err_t gamecube_rmt_init(void)
 {  
     const char* TAG = "gamecube_rmt_init";
 
+    cmd_phase = CMD_PHASE_PROBE;
+
     periph_ll_enable_clk_clear_rst(PERIPH_RMT_MODULE);
 
     // RMT Peripheral System Config
     JB_RMT_FIFO     = 1;
     JB_RMT_CLKSEL   = 1;
     JB_TX_CLKEN     = 1;
+
+    memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
 
     // RMT Peripheral TX Config
     JB_TX_CARRIER   = 0;
@@ -105,10 +99,11 @@ esp_err_t gamecube_rmt_init(void)
     JB_RX_MEMOWNER  = 1;
     JB_RX_IDLETHRESH= JB_IDLE_TICKS;
     JB_RX_FILTEREN  = 1;
-    JB_RX_FILTERTHR = 2;
+    JB_RX_FILTERTHR = 1;
     JB_RX_BEGIN     = 0;
     JB_RX_SYNC      = 1;
     JB_RX_SYNC      = 0;
+    JB_RX_BEGIN     = 1;
 
     // Enable receipt complete interrupts
     JB_RX_ENAISR    = 1;
@@ -117,20 +112,14 @@ esp_err_t gamecube_rmt_init(void)
     gpio_matrix_out(JB_P1_GPIO, RMT_SIG_OUT0_IDX, 0, 0);
     gpio_matrix_in(JB_P1_GPIO, RMT_SIG_IN0_IDX, 0);
 
-    memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
-
-    cmd_phase = CMD_PHASE_PROBE;
-
     rx_offset       = RMT.chmstatus[0].mem_waddr_ex_chm;
-    ESP_LOGI("SETUPPHASE", "Offset: %X", (unsigned int) rx_offset);
+    //ESP_LOGI("SETUPPHASE", "Offset: %X", (unsigned int) rx_offset);
 
     esp_err_t err = rmt_isr_register(gamecube_rmt_isr, NULL, 0, NULL);
     if (err != ESP_OK)
     {
         ESP_LOGI(esp_err_to_name(err), "%d", (unsigned int) err);
     }
-
-    //JB_TX_BEGIN     = 1;
 
     return err;
 }
@@ -320,11 +309,11 @@ void adapter_mode_task(void *param)
 {
     bool mode_prev_store    = false;
     bool mode_fwd_store     = false;
+    vTaskDelay(1000/portTICK_PERIOD_MS);
 
     for(;;)
     {
-        vTaskDelay(16/portTICK_PERIOD_MS);
-        if (cmd_phase != CMD_PHASE_POLL)
+        if (cmd_phase == CMD_PHASE_PROBE)
         {
             uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
 
@@ -338,6 +327,7 @@ void adapter_mode_task(void *param)
                     adapter_settings.adapter_mode = 0x00;
                 }
                 rgb_animate_to(COLOR_BLACK);
+                vTaskDelay(500/portTICK_PERIOD_MS);
                 save_adapter_settings();
                 esp_restart();
             }
@@ -357,11 +347,13 @@ void adapter_mode_task(void *param)
                     adapter_settings.adapter_mode -= 1;
                 }
                 rgb_animate_to(COLOR_BLACK);
+                vTaskDelay(500/portTICK_PERIOD_MS);
                 save_adapter_settings();
                 esp_restart();
             }
             // Store button state
             mode_prev_store = !util_getbit(regread, PREV_BUTTON);
         }
+        vTaskDelay(8/portTICK_PERIOD_MS);
     }
 }

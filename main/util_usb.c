@@ -562,9 +562,9 @@ static const uint8_t xi_configuration_descriptor[] = {
     // HID Descriptor
     9, HID_DESC_TYPE_HID, U16_TO_U8S_LE(0x0110), 0, 1, HID_DESC_TYPE_REPORT, U16_TO_U8S_LE(sizeof(xinput_hid_report_descriptor)),
     // Endpoint Descriptor
-    7, TUSB_DESC_ENDPOINT, 0x81, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(32), 4,
+    7, TUSB_DESC_ENDPOINT, 0x81, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(32), 1,
     // Endpoint Descriptor
-    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(33), 4,
+    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(33), 1,
 };
 
 static const tinyusb_config_t xi_cfg = {
@@ -595,12 +595,7 @@ uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_t
 
 
 void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint8_t len)
-{   
-    if (usb_phase == GC_USB_IDLE)
-    {
-        return;
-    }
-
+{
     switch (active_usb_mode)
     {
         case USB_MODE_GENERIC:
@@ -612,8 +607,13 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint8_t
 
         default:
         case USB_MODE_NS:
+            if (len == NS_HID_LEN)
+            {
+                usb_process_data();
+            }
+            break;
         case USB_MODE_XINPUT:
-            if (len == NS_HID_LEN || report[0] == 0x01)
+            if (report[0] == 0x01)
             {
                 usb_process_data();
             }
@@ -634,6 +634,7 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint8_t
 // received data on OUT endpoint ( Report ID = 0, Type = 0 )
 void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t const* buffer, uint16_t bufsize)
 {
+
     switch (active_usb_mode)
     {
         default:
@@ -859,7 +860,7 @@ uint8_t scale_trigger(int input)
     }
 }
 
-esp_err_t gcusb_start(usb_mode_t mode)
+void gcusb_start(usb_mode_t mode)
 {
     const char* TAG = "gcusb_start";
 
@@ -878,7 +879,6 @@ esp_err_t gcusb_start(usb_mode_t mode)
             break;
         case USB_MODE_GC:
             ESP_LOGI(TAG, "GCC MODE");
-
             ESP_ERROR_CHECK(tinyusb_driver_install(&gc_cfg));
             break;
 
@@ -890,16 +890,14 @@ esp_err_t gcusb_start(usb_mode_t mode)
 
     while(!tud_mounted())
     {
-        vTaskDelay(1/portTICK_PERIOD_MS);
+        vTaskDelay(8/portTICK_PERIOD_MS);
     }
     while (!tud_hid_ready())
     {
-        vTaskDelay(1/portTICK_PERIOD_MS);
+        vTaskDelay(8/portTICK_PERIOD_MS);
     }
-    usb_phase = GC_USB_OK;
+    vTaskDelay(250/portTICK_PERIOD_MS);
     usb_send_data();
-
-    return ESP_OK;
 }
 
 int adj_x;
@@ -1127,6 +1125,8 @@ void xinput_send_data(void)
 bool gc_first = false;
 void gc_send_data(void)
 {
+    gc_buffer[0] = 0x21;
+
     if (cmd_phase != CMD_PHASE_POLL)
     {
         gc_input.buttons_1 = 0x00;
@@ -1252,10 +1252,9 @@ void gc_send_data(void)
     {
         memcpy(&gc_buffer[2], &gc_input, 8);
     }
-    
-    gc_buffer[0] = 0x21;
 
     tud_hid_report(0, &gc_buffer, GC_HID_LEN);
+    
 }
 
 
@@ -1367,9 +1366,47 @@ void usb_send_data(void)
     }
 }
 
-#define TIMEOUT_GC 450
+// Some definitions for USB Timing
+#define TIME_USB_US 22
+#define TIME_GC_POLL 410/2
+#define TIMEOUT_GC_US 500
 #define TIMEOUT_COUNTS 10
+
+#define TIME_ENDCAP_MAX 550
+
+// The philosophy behind dynamic HID polling alignment
+/* 
+You have T1, which is the timestamp on which the RMT tx is started
+You have T2, which is the time it took for the USB packet to send
+
+We want to calculate the exact center of the minimum polling cycle
+in a given scenario.
+*/
+
+// This is our time counter that we can use
+// for calculations
 uint64_t usb_delay_time = 0;
+
+// This is the calculated delay we add
+// We only add this when we enter POLLING
+uint64_t usb_time_offset = 50;
+
+uint64_t rmt_poll_time = 0;
+
+void rmt_reset()
+{
+    JB_RX_MEMOWNER  = 1;
+    JB_RX_RDRST     = 1;
+    JB_RX_RDRST     = 0;
+    JB_RX_CLEARISR  = 1;
+    JB_RX_BEGIN     = 0;
+    JB_RX_SYNC      = 1;
+    JB_RX_SYNC      = 0;
+    JB_RX_BEGIN     = 1;
+    JB_TX_RDRST     = 1;
+    JB_TX_WRRST     = 1;
+    JB_TX_CLEARISR  = 1;
+}
 
 // This is called after each successfull USB report send.
 void usb_process_data(void)
@@ -1377,68 +1414,85 @@ void usb_process_data(void)
     // Check if we have config data to send out
     if(cmd_flagged)
     {
+        gc_timer_stop();
+        gc_timer_reset();
         command_queue_process();
+        rmt_reset();
         return;
     }
+    
+    if (cmd_phase == CMD_PHASE_POLL)
+    {
+        //JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (rx_vibrate) ? JB_HIGH : JB_LOW;
+        JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (rx_vibrate == true) ? JB_HIGH : JB_LOW;
 
-    esp_rom_delay_us(200);
+        if (gc_timer_status == GC_TIMER_IDLE)
+        {
+            gc_timer_start();
+        }
+        else if (gc_timer_status == GC_TIMER_STARTED)
+        {
+            gptimer_get_raw_count(gc_timer, &usb_delay_time);
+            gc_timer_reset();
 
+            // Calculate new time delay that we use during polling for
+            // perfectly centered polls (Only valid for above 2ms refresh)
+            if (usb_delay_time >= 2500)
+            {
+                usb_time_offset = (usb_delay_time/2) - TIME_GC_POLL - TIME_USB_US;
+            }
+            // Otherwise we know we're polling at 1ms and where we need to place the poll
+            else
+            {   
+                usb_time_offset = 500-TIME_GC_POLL;
+            }
+
+            ets_delay_us(usb_time_offset);
+        }
+    }
+    else
+    {
+        ets_delay_us(50);
+    }
+    
     // Start RMT transaction
-    // Set the memory owner back appropriately.
+    // Set mem owner
     JB_RX_MEMOWNER  = 1;
     // Set RX to begin so it starts when sync bit is set.
     JB_RX_BEGIN     = 1;
     // Start next transaction.
     JB_TX_BEGIN     = 1;
     
-
-    while(!rx_recieved && (rx_timeout < TIMEOUT_GC))
-    {
-        esp_rom_delay_us(1);
-        rx_timeout += 1;
-    }
+    ets_delay_us(TIMEOUT_GC_US);
 
     // If we timed out, just reset for next phase
-    if (rx_timeout >= TIMEOUT_GC)
+    if (!rx_recieved)
     {
+        
+        rmt_reset();
+
         rx_timeout_counts += 1;
         if (rx_timeout_counts >= TIMEOUT_COUNTS)
         {
+            gc_timer_stop();
+            gc_timer_reset();
+
             rx_timeout_counts = 0;
             cmd_phase = CMD_PHASE_PROBE;
             rgb_animate_to(COLOR_RED);
+
             memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
         }
-        rx_timeout = 0;
-
-        JB_RX_SYNC      = 0;
-        JB_RX_MEMOWNER  = 1;
-        JB_RX_RDRST     = 1;
-        JB_RX_RDRST     = 0;
-        JB_RX_BEGIN     = 0;
-        JB_RX_SYNC      = 1;
-        JB_RX_CLEARISR  = 1;
-        JB_RX_BEGIN     = 1;
-
-        JB_TX_SYNC      = 0;
-        JB_TX_STOP      = 1;
-        JB_TX_RDRST     = 1;
-        JB_TX_WRRST     = 1;
-        JB_TX_CLEARISR  = 1;
-        JB_TX_SYNC      = 1;
-        JB_TX_SYNC      = 0;
-        JB_TX_STOP      = 1;
-        JB_TX_SYNC      = 1;
-        JB_TX_SYNC      = 0;
     }
     else if (rx_recieved)
     {
         rx_recieved = false;
-        rx_timeout = 0;
+        rx_timeout_counts = 0;
         // Process our data if we received something
         // from the gamecube controller
         gamecube_rmt_process();
+        rmt_reset();
     }
-    
+
     usb_send_data();
 }
