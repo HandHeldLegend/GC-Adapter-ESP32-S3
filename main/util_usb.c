@@ -612,7 +612,10 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint8_t
 
         default:
         case USB_MODE_NS:
-            usb_process_data();
+            if (len == NS_HID_LEN)
+            {
+                usb_process_data();
+            }
             break;
         case USB_MODE_XINPUT:
             if (report[0] == 0x01)
@@ -1398,6 +1401,15 @@ uint64_t rmt_poll_time = 0;
 // This is called after each successfull USB report send.
 void usb_process_data(void)
 {
+    // Check if we have config data to send out
+    if(cmd_flagged)
+    {
+        gc_timer_stop();
+        gc_timer_reset();
+        command_queue_process();
+        return;
+    }
+
     if ( (gc_timer_status == GC_TIMER_IDLE) && (cmd_phase == CMD_PHASE_POLL) )
     {
         // Start timer if we haven't
@@ -1421,15 +1433,6 @@ void usb_process_data(void)
             usb_time_offset = 500-TIME_GC_POLL;
         }
         
-    }
-
-    // Check if we have config data to send out
-    if(cmd_flagged)
-    {
-        gc_timer_stop();
-        gc_timer_reset();
-        command_queue_process();
-        return;
     }
 
     // If we are in polling mode, perform the additional delay

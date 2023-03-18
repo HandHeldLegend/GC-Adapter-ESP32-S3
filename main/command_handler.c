@@ -44,6 +44,7 @@ void command_queue_process()
     if (!cmd_queue_idx)
     {
         cmd_flagged = false;
+        
     }
     else
     {
@@ -51,8 +52,6 @@ void command_queue_process()
     }
 
     tud_hid_report(CMD_USB_REPORTID, cmd_buffer, CMD_USB_REPORTLEN);
-    gc_timer_stop();
-    gc_timer_reset();
 }
 
 void command_handler(const uint8_t *data, uint16_t bufsize)
@@ -69,6 +68,8 @@ void command_handler(const uint8_t *data, uint16_t bufsize)
             save_adapter_settings();
             rgb_animate_blink(COLOR_GREEN);
             vTaskDelay(250/portTICK_PERIOD_MS);
+            gamecube_rmt_init();
+            usb_send_data();
             break;
 
         // Load all settings to web interface

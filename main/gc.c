@@ -76,6 +76,8 @@ esp_err_t gamecube_rmt_init(void)
 {  
     const char* TAG = "gamecube_rmt_init";
 
+    cmd_phase = CMD_PHASE_PROBE;
+
     periph_ll_enable_clk_clear_rst(PERIPH_RMT_MODULE);
 
     // RMT Peripheral System Config
@@ -119,8 +121,6 @@ esp_err_t gamecube_rmt_init(void)
     gpio_set_direction(JB_P1_GPIO, GPIO_MODE_INPUT_OUTPUT_OD);
     gpio_matrix_out(JB_P1_GPIO, RMT_SIG_OUT0_IDX, 0, 0);
     gpio_matrix_in(JB_P1_GPIO, RMT_SIG_IN0_IDX, 0);
-
-    cmd_phase = CMD_PHASE_PROBE;
 
     rx_offset       = RMT.chmstatus[0].mem_waddr_ex_chm;
     //ESP_LOGI("SETUPPHASE", "Offset: %X", (unsigned int) rx_offset);
