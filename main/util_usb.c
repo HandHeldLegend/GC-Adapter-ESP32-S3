@@ -1425,6 +1425,34 @@ void usb_process_data(void)
     {
         //JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (rx_vibrate) ? JB_HIGH : JB_LOW;
         JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (rx_vibrate == true) ? JB_HIGH : JB_LOW;
+
+        if (gc_timer_status == GC_TIMER_IDLE)
+        {
+            gc_timer_start();
+        }
+        else if (gc_timer_status == GC_TIMER_STARTED)
+        {
+            gptimer_get_raw_count(gc_timer, &usb_delay_time);
+            gc_timer_reset();
+
+            // Calculate new time delay that we use during polling for
+            // perfectly centered polls (Only valid for above 2ms refresh)
+            if (usb_delay_time >= 2500)
+            {
+                usb_time_offset = (usb_delay_time/2) - TIME_GC_POLL - TIME_USB_US;
+            }
+            // Otherwise we know we're polling at 1ms and where we need to place the poll
+            else
+            {   
+                usb_time_offset = 500-TIME_GC_POLL;
+            }
+
+            ets_delay_us(usb_time_offset);
+        }
+    }
+    else
+    {
+        ets_delay_us(50);
     }
     
     // Start RMT transaction
