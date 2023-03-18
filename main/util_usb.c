@@ -896,6 +896,8 @@ esp_err_t gcusb_start(usb_mode_t mode)
     {
         vTaskDelay(1/portTICK_PERIOD_MS);
     }
+
+    vTaskDelay(250/portTICK_PERIOD_MS);
     usb_phase = GC_USB_OK;
     usb_send_data();
 
@@ -1367,21 +1369,79 @@ void usb_send_data(void)
     }
 }
 
-#define TIMEOUT_GC 450
+// Some definitions for USB Timing
+#define TIME_USB_US 22
+#define TIME_GC_POLL 410/2
+#define TIMEOUT_GC_US 500
 #define TIMEOUT_COUNTS 10
+
+#define TIME_ENDCAP_MAX 550
+
+// The philosophy behind dynamic HID polling alignment
+/* 
+You have T1, which is the timestamp on which the RMT tx is started
+You have T2, which is the time it took for the USB packet to send
+
+We want to calculate the exact center of the minimum polling cycle
+in a given scenario.
+*/
+
+// This is our time counter that we can use
+// for calculations
 uint64_t usb_delay_time = 0;
+
+// This is the calculated delay we add
+// We only add this when we enter POLLING
+uint64_t usb_time_offset = 0;
+
+uint64_t rmt_poll_time = 0;
 
 // This is called after each successfull USB report send.
 void usb_process_data(void)
 {
+    if ( (gc_timer_status == GC_TIMER_IDLE) && (cmd_phase == CMD_PHASE_POLL) )
+    {
+        // Start timer if we haven't
+        gc_timer_start();
+    }
+    else if (gc_timer_status == GC_TIMER_STARTED)
+    {
+        // Save the timestamp
+        gptimer_get_raw_count(gc_timer, &usb_delay_time);
+        gc_timer_reset();
+
+        // Calculate new time delay that we use during polling for
+        // perfectly centered polls (Only valid for above 2ms refresh)
+        if (usb_delay_time >= 2500)
+        {
+            usb_time_offset = (usb_delay_time/2) - TIME_GC_POLL - TIME_USB_US;
+        }
+        // Otherwise we know we're polling at 1ms and where we need to place the poll
+        else
+        {   
+            usb_time_offset = 500-TIME_GC_POLL;
+        }
+        
+    }
+
     // Check if we have config data to send out
     if(cmd_flagged)
     {
+        gc_timer_stop();
+        gc_timer_reset();
         command_queue_process();
         return;
     }
 
-    esp_rom_delay_us(200);
+    // If we are in polling mode, perform the additional delay
+    if (cmd_phase == CMD_PHASE_POLL)
+    {
+        esp_rom_delay_us(usb_time_offset);
+    }
+    else
+    {
+        esp_rom_delay_us(50);
+    }
 
     // Start RMT transaction
     // Set the memory owner back appropriately.
@@ -1392,18 +1452,20 @@ void usb_process_data(void)
     JB_TX_BEGIN     = 1;
     
 
-    while(!rx_recieved && (rx_timeout < TIMEOUT_GC))
+    while(!rx_recieved && (rx_timeout < TIMEOUT_GC_US))
     {
         esp_rom_delay_us(1);
         rx_timeout += 1;
     }
 
     // If we timed out, just reset for next phase
-    if (rx_timeout >= TIMEOUT_GC)
+    if (rx_timeout >= TIMEOUT_GC_US)
     {
         rx_timeout_counts += 1;
         if (rx_timeout_counts >= TIMEOUT_COUNTS)
         {
+            gc_timer_stop();
+            gc_timer_reset();
             rx_timeout_counts = 0;
             cmd_phase = CMD_PHASE_PROBE;
             rgb_animate_to(COLOR_RED);

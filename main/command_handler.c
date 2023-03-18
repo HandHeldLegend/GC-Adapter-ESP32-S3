@@ -67,6 +67,8 @@ void command_handler(const uint8_t *data, uint16_t bufsize)
         // Save all settings
         case CMD_SETTINGS_SAVEALL:
             save_adapter_settings();
+            rgb_animate_blink(COLOR_GREEN);
+            vTaskDelay(250/portTICK_PERIOD_MS);
             break;
 
         // Load all settings to web interface
