@@ -50,24 +50,14 @@ static void gamecube_rmt_isr(void* arg)
     // Status when RX is completed
     else if (JB_RX_STATISR)
     {
-        // Store the receive offset address
         rx_offset       = RMT.chmstatus[0].mem_waddr_ex_chm - GC_MEM_OFFSET;
-        // set the RX timeout to 0 
         rx_timeout      = 0;
-        // Set mem owner
-        JB_RX_MEMOWNER  = 0;
+        JB_RX_MEMOWNER  = 1;
         JB_RX_RDRST     = 1;
         JB_RX_RDRST     = 0;
         JB_RX_BEGIN     = 0;
         JB_RX_SYNC      = 1;
-        JB_RX_SYNC      = 0;
-        // Clear status bit
         JB_RX_CLEARISR  = 1;
-
-        // Set vibrate bit based on received data
-        JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (rx_vibrate) ? JB_HIGH : JB_LOW;
-
-        // Set rx_received as true
         rx_recieved = true;
     }
 }
@@ -113,7 +103,7 @@ esp_err_t gamecube_rmt_init(void)
     JB_RX_BEGIN     = 0;
     JB_RX_SYNC      = 1;
     JB_RX_SYNC      = 0;
-    //JB_RX_BEGIN     = 1;
+    JB_RX_BEGIN     = 1;
 
     // Enable receipt complete interrupts
     JB_RX_ENAISR    = 1;
@@ -364,6 +354,6 @@ void adapter_mode_task(void *param)
             // Store button state
             mode_prev_store = !util_getbit(regread, PREV_BUTTON);
         }
-        vTaskDelay(32/portTICK_PERIOD_MS);
+        vTaskDelay(8/portTICK_PERIOD_MS);
     }
 }

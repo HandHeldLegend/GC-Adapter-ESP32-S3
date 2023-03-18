@@ -152,7 +152,7 @@ void rgb_animate_blink(rgb_s color)
 void rgb_animator_init()
 {
     rgb_animator_Queue = xQueueCreate(10, sizeof(rgb_msg_s));
-    xTaskCreatePinnedToCore(rgb_animator_task, "rgb_task", 2048, NULL, 3, &rgb_animator_TaskHandle, 0);
+    xTaskCreatePinnedToCore(rgb_animator_task, "rgb_task", 2048, NULL, 3, &rgb_animator_TaskHandle, 1);
 }
 
 

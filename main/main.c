@@ -53,7 +53,7 @@ void app_main(void)
     {
         active_usb_mode = adapter_settings.adapter_mode;
         // Start task which will help with mode switching
-        xTaskCreatePinnedToCore(adapter_mode_task, "mode_task", 4000, NULL, 4, &mode_task_handle, 0);
+        xTaskCreatePinnedToCore(adapter_mode_task, "mode_task", 4000, NULL, 4, &mode_task_handle, 1);
     }
 
     neopixel_init(colors, SPI3_HOST);
@@ -86,5 +86,6 @@ void app_main(void)
 
     gc_timer_init();
     gamecube_rmt_init();
+    
     gcusb_start(active_usb_mode);
 }
