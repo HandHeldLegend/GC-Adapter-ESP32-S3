@@ -905,7 +905,7 @@ void xinput_send_data(void)
                 break;
             
             case TRIG_MODE_A2D:
-                xid_input.analog_trigger_l   = (adj_tl >= adapter_settings.trigger_threshold_l) ? (255) : scale_trigger(adj_tl);
+                xid_input.analog_trigger_l   = gc_poll_response.button_l * 255;
                 break;
         }
 
@@ -917,7 +917,7 @@ void xinput_send_data(void)
                 break;
             
             case TRIG_MODE_A2D:
-                xid_input.analog_trigger_r   = (adj_tr >= adapter_settings.trigger_threshold_r) ? (255) : scale_trigger(adj_tr);
+                xid_input.analog_trigger_r   = gc_poll_response.button_r * 255;
                 break;
         }
 
@@ -1232,8 +1232,14 @@ void usb_process_data(void)
     
     if (cmd_phase == CMD_PHASE_POLL)
     {
-        //JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (rx_vibrate) ? JB_HIGH : JB_LOW;
-        JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (rx_vibrate == true) ? JB_HIGH : JB_LOW;
+        if (active_gc_type == GC_TYPE_WIRED)
+        {
+            JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (rx_vibrate == true) ? JB_HIGH : JB_LOW;
+        }
+        else if (active_gc_type == GC_TYPE_WAVEBIRD)
+        {
+            JB_TX_MEM[GC_POLL_VIBRATE_IDX] = JB_LOW;
+        }
 
         if (gc_timer_status == GC_TIMER_IDLE)
         {

@@ -23,6 +23,7 @@ rmt_item32_t gcmd_poll_rmt[GCMD_POLL_LEN] = {
 gc_cmd_phase_t         cmd_phase           = CMD_PHASE_PROBE;
 gc_usb_phase_t         usb_phase           = GC_USB_IDLE;
 usb_mode_t             active_usb_mode    = USB_MODE_GENERIC;
+gc_type_t              active_gc_type     = GC_TYPE_UNKNOWN;
 
 gc_probe_response_s    gc_probe_response   = {0};
 gc_poll_response_s     gc_poll_response    = {0};
@@ -32,13 +33,14 @@ volatile uint32_t   rx_timeout  = 0;
 volatile uint32_t   rx_timeout_counts = 0;
 volatile bool       rx_recieved     = false;
 volatile uint32_t   rx_offset       = 0;
-volatile bool rx_vibrate    = false;
+volatile bool       rx_vibrate    = false;
 
 static void gamecube_rmt_isr(void* arg) 
 {
+    JB_RX_SYNC = JB_TX_STATISR;
     if (JB_TX_STATISR)
     {
-        JB_RX_SYNC      = 1;
+        //JB_RX_SYNC      = 1;
 
         JB_TX_RDRST     = 1;
         JB_TX_RDRST     = 0;
@@ -156,8 +158,9 @@ void gamecube_rmt_process(void)
                     gc_probe_response.junk |= ((JB_RX_MEM[i+16].duration0 < JB_RX_MEM[i+16].duration1) ? 1 : 0) << (7-i);
                 }
 
-                if (gc_probe_response.id_upper == 0x9)
+                if ((gc_probe_response.id_upper == GC_TYPE_WIRED) || (gc_probe_response.id_upper == GC_TYPE_WAVEBIRD))
                 {
+                    active_gc_type = gc_probe_response.id_upper;
                     cmd_phase = CMD_PHASE_ORIGIN;
                     memcpy(JB_TX_MEM, gcmd_origin_rmt, sizeof(rmt_item32_t) * GCMD_ORIGIN_LEN);
                 }
@@ -250,54 +253,116 @@ void gamecube_rmt_process(void)
         case CMD_PHASE_POLL:
 
             uint8_t tmp_junk = 0x00;
+            bool wavebird_connected = false;
             tmp_junk |= ((JB_RX_MEM[0].duration0 < JB_RX_MEM[0].duration1) ? 1 : 0) << (7);
             tmp_junk |= ((JB_RX_MEM[1].duration0 < JB_RX_MEM[1].duration1) ? 1 : 0) << (6);
-            tmp_junk |= ((JB_RX_MEM[2].duration0 < JB_RX_MEM[2].duration1) ? 1 : 0) << (5);
+            wavebird_connected |= ((JB_RX_MEM[2].duration0 < JB_RX_MEM[2].duration1) ? 1 : 0) << (5);
 
-            // Toss out junk data
-            if ((rx_offset == GC_POLL_RESPONSE_LEN) && !tmp_junk)
-            {
+
+            if (rx_offset == GC_POLL_RESPONSE_LEN)
+            {   
                 rx_offset = 0;
                 memset(&gc_poll_response, 0, sizeof(gc_poll_response));
 
-                for (uint8_t i = 3; i < 8; i++)
+                // Handle edge case where Smash Box responds too quickly, dropping a bit.
+                // In this edge case the level would start as HIGH instead of low.
+                if (JB_RX_MEM[0].level0)
                 {
-                    gc_poll_response.buttons_1 |= ((JB_RX_MEM[i].duration0 < JB_RX_MEM[i].duration1) ? 1 : 0) << (7-i);
-                }
+                    uint8_t mem_idx = 2;
 
-                for (uint8_t i = 0; i < 8; i++)
-                {
-                    gc_poll_response.buttons_2 |= ((JB_RX_MEM[i+8].duration0 < JB_RX_MEM[i+8].duration1) ? 1 : 0) << (7-i);
-                }
+                    for (uint8_t i = 3; i < 8; i++)
+                    {
+                        gc_poll_response.buttons_1 |= ((JB_RX_MEM[mem_idx].duration1 < JB_RX_MEM[mem_idx+1].duration0) ? 1 : 0) << (7-i);
+                        mem_idx += 1;
+                    }
 
-                for (uint8_t i = 0; i < 8; i++)
-                {
-                    gc_poll_response.stick_x |= ((JB_RX_MEM[i+16].duration0 < JB_RX_MEM[i+16].duration1) ? 1 : 0) << (7-i);
-                }
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.buttons_2 |= ((JB_RX_MEM[mem_idx].duration1 < JB_RX_MEM[mem_idx+1].duration0) ? 1 : 0) << (7-i);
+                        mem_idx += 1;
+                    }
 
-                for (uint8_t i = 0; i < 8; i++)
-                {
-                    gc_poll_response.stick_y |= ((JB_RX_MEM[i+24].duration0 < JB_RX_MEM[i+24].duration1) ? 1 : 0) << (7-i);
-                }
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.stick_x |= ((JB_RX_MEM[mem_idx].duration1 < JB_RX_MEM[mem_idx+1].duration0) ? 1 : 0) << (7-i);
+                        mem_idx += 1;
+                    }
 
-                for (uint8_t i = 0; i < 8; i++)
-                {
-                    gc_poll_response.cstick_x |= ((JB_RX_MEM[i+32].duration0 < JB_RX_MEM[i+32].duration1) ? 1 : 0) << (7-i);
-                }
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.stick_y |= ((JB_RX_MEM[mem_idx].duration1 < JB_RX_MEM[mem_idx+1].duration0) ? 1 : 0) << (7-i);
+                        mem_idx += 1;
+                    }
 
-                for (uint8_t i = 0; i < 8; i++)
-                {
-                    gc_poll_response.cstick_y |= ((JB_RX_MEM[i+40].duration0 < JB_RX_MEM[i+40].duration1) ? 1 : 0) << (7-i);
-                }
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.cstick_x |= ((JB_RX_MEM[mem_idx].duration1 < JB_RX_MEM[mem_idx+1].duration0) ? 1 : 0) << (7-i);
+                        mem_idx += 1;
+                    }
 
-                for (uint8_t i = 0; i < 8; i++)
-                {
-                    gc_poll_response.trigger_l |= ((JB_RX_MEM2[i].duration0 < JB_RX_MEM2[i].duration1) ? 1 : 0) << (7-i);
-                }
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.cstick_y |= ((JB_RX_MEM[mem_idx].duration1 < JB_RX_MEM[mem_idx+1].duration0) ? 1 : 0) << (7-i);
+                        mem_idx += 1;
+                    }
 
-                for (uint8_t i = 0; i < 8; i++)
+                    gc_poll_response.trigger_l |= ((JB_RX_MEM[47].duration1 < JB_RX_MEM2[1].duration0) ? 1 : 0) << 7;
+                    mem_idx = 0;
+
+                    for (uint8_t i = 1; i < 8; i++)
+                    {
+                        gc_poll_response.trigger_l |= ((JB_RX_MEM2[mem_idx].duration1 < JB_RX_MEM2[mem_idx+1].duration0) ? 1 : 0) << (7-i);
+                        mem_idx += 1;
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.trigger_r |= ((JB_RX_MEM2[mem_idx].duration1 < JB_RX_MEM2[mem_idx+1].duration0) ? 1 : 0) << (7-i);
+                        mem_idx += 1;
+                    }
+                }
+                // Toss out junk data
+                else if (!JB_RX_MEM[0].level0)
                 {
-                    gc_poll_response.trigger_r |= ((JB_RX_MEM2[i+8].duration0 < JB_RX_MEM2[i+8].duration1) ? 1 : 0) << (7-i);
+                    for (uint8_t i = 3; i < 8; i++)
+                    {
+                        gc_poll_response.buttons_1 |= ((JB_RX_MEM[i].duration0 < JB_RX_MEM[i].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.buttons_2 |= ((JB_RX_MEM[i+8].duration0 < JB_RX_MEM[i+8].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.stick_x |= ((JB_RX_MEM[i+16].duration0 < JB_RX_MEM[i+16].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.stick_y |= ((JB_RX_MEM[i+24].duration0 < JB_RX_MEM[i+24].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.cstick_x |= ((JB_RX_MEM[i+32].duration0 < JB_RX_MEM[i+32].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.cstick_y |= ((JB_RX_MEM[i+40].duration0 < JB_RX_MEM[i+40].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.trigger_l |= ((JB_RX_MEM2[i].duration0 < JB_RX_MEM2[i].duration1) ? 1 : 0) << (7-i);
+                    }
+
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        gc_poll_response.trigger_r |= ((JB_RX_MEM2[i+8].duration0 < JB_RX_MEM2[i+8].duration1) ? 1 : 0) << (7-i);
+                    }
                 }
             }
 
