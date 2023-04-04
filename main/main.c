@@ -44,8 +44,6 @@ void app_main(void)
 
     load_adapter_settings();
 
-    
-
     uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
     if (!util_getbit(regread, PREV_BUTTON))
     {
@@ -68,21 +66,19 @@ void app_main(void)
     {
         default:
         case USB_MODE_NS:
-            rgb_animate_to(COLOR_YELLOW);
+            mode_color.rgb = COLOR_YELLOW.rgb;
         break;
         case USB_MODE_GC:
-            rgb_animate_to(COLOR_PURPLE);
+            mode_color.rgb = COLOR_PURPLE.rgb;
         break;
         case USB_MODE_GENERIC:
-            rgb_animate_to(COLOR_BLUE);
+            mode_color.rgb = COLOR_BLUE.rgb;
         break;
         case USB_MODE_XINPUT:
-            rgb_s xbox_color = {
-                .rgb = 0x107C10,
-            };
-            rgb_animate_to(xbox_color);
+            mode_color.rgb = 0x107C10;
             break;
     }
+    rgb_animate_to(mode_color);
 
     vTaskDelay(250/portTICK_PERIOD_MS);
 

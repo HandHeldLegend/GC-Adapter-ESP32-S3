@@ -1,6 +1,7 @@
 #include "util_usb.h"
 
 usb_mode_t adapter_mode         = USB_MODE_NS;
+uint16_t usb_timeout_time       = 0;
 
 /************* TinyUSB descriptors ****************/
 
@@ -82,8 +83,8 @@ const uint8_t dinput_hid_report_descriptor[] = {
             0x09, 0x31,        //   Usage (Y)
             0x09, 0x32,        //   Usage (Z)
             0x09, 0x35,        //   Usage (Rz)
-            0x09, 0x33,        //   Usage (Rx)
-            0x09, 0x34,        //   Usage (Ry)
+            0x09, 0x36,        //   Usage (Slider)
+            0x09, 0x37,        //   Usage (Dial)
 
             0x75, 0x08,        //   Report Size (8)
             0x95, 0x06,        //   Report Count (6)
@@ -657,6 +658,32 @@ uint8_t scale_trigger(int input)
     }
 }
 
+int gc_origin_adjust(uint8_t value, int origin, bool invert)
+{
+    int out = 0;
+
+    if(invert)
+    {
+        out = 256 - ((int) value - origin);
+    }
+    else
+    {
+        out = (int) value - origin;
+    }
+
+    if (out < 28)
+    {
+        out = 28;
+    }
+    else if (out > 227)
+    {
+        out = 227;
+    }
+
+    return out;
+    
+}
+
 void gcusb_start(usb_mode_t mode)
 {
     const char* TAG = "gcusb_start";
@@ -764,8 +791,8 @@ void dinput_send_data(void)
         di_input.button_plus = gc_poll_response.button_start;
 
         // Get origin modified Trigger analog data
-        adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
-        adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
+        adj_tl  = gc_origin_adjust(gc_poll_response.trigger_l, gc_origin_data.trigger_l,  false);
+        adj_tr  = gc_origin_adjust(gc_poll_response.trigger_r, gc_origin_data.trigger_r,  false);
 
         switch( adapter_settings.di_trigger_l)
         {
@@ -815,10 +842,10 @@ void dinput_send_data(void)
                 break;
         }
         
-        adj_x   = (int) gc_poll_response.stick_x - gc_origin_data.stick_x;
-        adj_y   = (int) gc_poll_response.stick_y - gc_origin_data.stick_y;
-        adj_cx  = (int) gc_poll_response.cstick_x - gc_origin_data.cstick_x;
-        adj_cy  = (int) gc_poll_response.cstick_y - gc_origin_data.cstick_y;
+        adj_x   = gc_origin_adjust(gc_poll_response.stick_x,  gc_origin_data.stick_x,     false);
+        adj_y   = gc_origin_adjust(gc_poll_response.stick_y,  gc_origin_data.stick_y,     true);
+        adj_cx  = gc_origin_adjust(gc_poll_response.cstick_x, gc_origin_data.cstick_x,    false);
+        adj_cy  = gc_origin_adjust(gc_poll_response.cstick_y, gc_origin_data.cstick_y,    false);
 
         di_input.stick_left_x   = (uint8_t) adj_x;
         di_input.stick_left_y   = (uint8_t) adj_y;
@@ -889,13 +916,13 @@ void xinput_send_data(void)
             xid_input.button_menu = 1;
         }
 
-        adj_x   = (int) gc_poll_response.stick_x         - gc_origin_data.stick_x;
-        adj_y   = 256 - ((int) gc_poll_response.stick_y  - gc_origin_data.stick_y);
-        adj_cx  = (int) gc_poll_response.cstick_x        - gc_origin_data.cstick_x;
-        adj_cy  = 256 - ((int) gc_poll_response.cstick_y - gc_origin_data.cstick_y);
+        adj_x   = gc_origin_adjust(gc_poll_response.stick_x,  gc_origin_data.stick_x,     false);
+        adj_y   = gc_origin_adjust(gc_poll_response.stick_y,  gc_origin_data.stick_y,     true);
+        adj_cx  = gc_origin_adjust(gc_poll_response.cstick_x, gc_origin_data.cstick_x,    false);
+        adj_cy  = gc_origin_adjust(gc_poll_response.cstick_y, gc_origin_data.cstick_y,    true);
 
-        adj_tl  = (int) gc_poll_response.trigger_l       - gc_origin_data.trigger_l;
-        adj_tr  = (int) gc_poll_response.trigger_r       - gc_origin_data.trigger_r;
+        adj_tl  = gc_origin_adjust(gc_poll_response.trigger_l, gc_origin_data.trigger_l,  false);
+        adj_tr  = gc_origin_adjust(gc_poll_response.trigger_r, gc_origin_data.trigger_r,  false);
 
         switch( adapter_settings.xi_trigger_l)
         {
@@ -976,8 +1003,8 @@ void gc_send_data(void)
             gc_input.button_z       = gc_poll_response.button_y;
         }
 
-        adj_tl  = (int) gc_poll_response.trigger_l  - gc_origin_data.trigger_l;
-        adj_tr  = (int) gc_poll_response.trigger_r  - gc_origin_data.trigger_r;
+        adj_tl  = gc_origin_adjust(gc_poll_response.trigger_l, gc_origin_data.trigger_l,  false);
+        adj_tr  = gc_origin_adjust(gc_poll_response.trigger_r, gc_origin_data.trigger_r,  false);
 
         switch( adapter_settings.gc_trigger_l)
         {
@@ -1027,10 +1054,10 @@ void gc_send_data(void)
                 break;
         }
 
-        adj_x   = (int) gc_poll_response.stick_x    - gc_origin_data.stick_x;
-        adj_y   = (int) gc_poll_response.stick_y    - gc_origin_data.stick_y;
-        adj_cx  = (int) gc_poll_response.cstick_x   - gc_origin_data.cstick_x;
-        adj_cy  = (int) gc_poll_response.cstick_y   - gc_origin_data.cstick_y;
+        adj_x   = gc_origin_adjust(gc_poll_response.stick_x,  gc_origin_data.stick_x,     false);
+        adj_y   = gc_origin_adjust(gc_poll_response.stick_y,  gc_origin_data.stick_y,     false);
+        adj_cx  = gc_origin_adjust(gc_poll_response.cstick_x, gc_origin_data.cstick_x,    false);
+        adj_cy  = gc_origin_adjust(gc_poll_response.cstick_y, gc_origin_data.cstick_y,    false);
 
         gc_input.stick_x        = (uint8_t) adj_x;
         gc_input.stick_y        = (uint8_t) adj_y;
@@ -1112,8 +1139,8 @@ void ns_send_data(void)
 
         ns_input.button_plus = gc_poll_response.button_start;
 
-        adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
-        adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
+        adj_tl  = gc_origin_adjust(gc_poll_response.trigger_l, gc_origin_data.trigger_l,  false);
+        adj_tr  = gc_origin_adjust(gc_poll_response.trigger_r, gc_origin_data.trigger_r,  false);
 
         switch( adapter_settings.ns_trigger_l)
         {
@@ -1138,11 +1165,11 @@ void ns_send_data(void)
                 ns_input.trigger_zr = (adj_tr >= adapter_settings.trigger_threshold_r) ? 1 : 0;
                 break;
         }
-        
-        adj_x   = (int) gc_poll_response.stick_x - gc_origin_data.stick_x;
-        adj_y   = 256 - ( (int) gc_poll_response.stick_y - gc_origin_data.stick_y );
-        adj_cx  = (int) gc_poll_response.cstick_x - gc_origin_data.cstick_x;
-        adj_cy  = 256 - ( (int) gc_poll_response.cstick_y - gc_origin_data.cstick_y ); 
+
+        adj_x   = gc_origin_adjust(gc_poll_response.stick_x,  gc_origin_data.stick_x,     false);
+        adj_y   = gc_origin_adjust(gc_poll_response.stick_y,  gc_origin_data.stick_y,     true);
+        adj_cx  = gc_origin_adjust(gc_poll_response.cstick_x, gc_origin_data.cstick_x,    false);
+        adj_cy  = gc_origin_adjust(gc_poll_response.cstick_y, gc_origin_data.cstick_y,    true);
 
         ns_input.stick_left_x   = scale_axis(adj_x);
         ns_input.stick_left_y   = scale_axis(adj_y);
@@ -1220,6 +1247,7 @@ void rmt_reset()
 // This is called after each successfull USB report send.
 void usb_process_data(void)
 {
+    usb_timeout_time = 0;
     // Check if we have config data to send out
     if(cmd_flagged)
     {

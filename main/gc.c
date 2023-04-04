@@ -378,7 +378,24 @@ void adapter_mode_task(void *param)
 
     for(;;)
     {
-        if (cmd_phase == CMD_PHASE_PROBE)
+        usb_timeout_time += 1;
+        if (usb_timeout_time > USB_TIMEOUT_CAP)
+        {
+            cmd_phase = CMD_PHASE_PROBE;
+            usb_timeout_time = 0;
+            rgb_animate_to(mode_color);
+            gc_timer_stop();
+            gc_timer_reset();
+            rmt_reset();
+            memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
+            vTaskDelay(250/portTICK_PERIOD_MS);
+            tud_disconnect();
+            if (tud_connect())
+            {
+                usb_send_data();
+            }
+        }
+        else if (cmd_phase == CMD_PHASE_PROBE)
         {
             uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
 
