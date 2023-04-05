@@ -35,7 +35,7 @@ typedef enum
     HAT_MODE_XI,
 } hat_mode_t;
 
-#define USB_TIMEOUT_CAP 160
+#define USB_TIMEOUT_CAP 200
 extern usb_mode_t adapter_mode;
 extern uint16_t usb_timeout_time;
 

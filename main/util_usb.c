@@ -1183,6 +1183,10 @@ void ns_send_data(void)
 
 void usb_send_data(void)
 {
+    if (!tud_ready())
+    {
+        return;
+    }
     // Send USB data according to the adapter mode
     switch (active_usb_mode)
     {
@@ -1244,7 +1248,7 @@ void rmt_reset()
     JB_TX_CLEARISR  = 1;
 }
 
-// This is called after each successfull USB report send.
+// This is called after each successful USB report send.
 void usb_process_data(void)
 {
     usb_timeout_time = 0;

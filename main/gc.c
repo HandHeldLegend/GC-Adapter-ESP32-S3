@@ -374,28 +374,49 @@ void adapter_mode_task(void *param)
 {
     bool mode_prev_store    = false;
     bool mode_fwd_store     = false;
-    vTaskDelay(1000/portTICK_PERIOD_MS);
+    vTaskDelay(200/portTICK_PERIOD_MS);
 
     for(;;)
     {
         usb_timeout_time += 1;
         if (usb_timeout_time > USB_TIMEOUT_CAP)
-        {
-            cmd_phase = CMD_PHASE_PROBE;
+        {   
+            if (tud_disconnect())
+            {
+                tud_connect();
+            }
             usb_timeout_time = 0;
+            rx_timeout_counts = 0;
             rgb_animate_to(mode_color);
             gc_timer_stop();
             gc_timer_reset();
             rmt_reset();
+            cmd_phase = CMD_PHASE_PROBE;
             memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
-            vTaskDelay(250/portTICK_PERIOD_MS);
-            tud_disconnect();
-            if (tud_connect())
+            
+            vTaskDelay(300/portTICK_PERIOD_MS);
+            while(!tud_mounted())
             {
-                usb_send_data();
+                vTaskDelay(8/portTICK_PERIOD_MS);
             }
+            if (active_usb_mode != USB_MODE_XINPUT)
+            {
+                while (!tud_hid_ready())
+                {
+                    vTaskDelay(8/portTICK_PERIOD_MS);
+                }
+            }
+            else
+            {
+                while(!tud_xinput_ready())
+                    {
+                        vTaskDelay(8/portTICK_PERIOD_MS);
+                    }
+            }
+            usb_send_data();
         }
-        else if (cmd_phase == CMD_PHASE_PROBE)
+        
+        if (cmd_phase == CMD_PHASE_PROBE)
         {
             uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
 
