@@ -583,38 +583,42 @@ uint8_t dir_to_hat(hat_mode_t hat_type, uint8_t leftRight, uint8_t upDown)
     }
 }
 
-#define ANALOG_SCALER (float) 1.28
+#define ANALOG_SCALER (float) 1.27
 uint8_t scale_axis(int input)
 {
     int res = input;
 
-    if (input > 228)
+    if (input > 255)
     {
-        input = 228;
+        input = 255;
     }
-    if (input < 28)
+    if (input < 0)
     {
-        input = 28;
+        input = 0;
     }
 
-    if (input > 129)
+    if (input > 127)
     {
-        float tmp = (float) input - 128;
+        float tmp = (float) input - 127;
         tmp = tmp * ANALOG_SCALER;
-        res = (int) tmp + 128;
+        res = (int) tmp + 127;
     }
     else if (input < 127)
     {
-        float tmp = 128 - (float) input;
+        float tmp = 127 - (float) input;
         tmp = tmp * ANALOG_SCALER;
-        res = 128 - (int) tmp;    
+        res = 127 - (int) tmp;    
+    }
+    else
+    {
+        res = 127;
     }
     
-    if (res >= 255)
+    if (res > 255)
     {
         res = 255;
     }
-    if (res <= 0)
+    if (res < 0)
     {
         res = 0;
     }
@@ -626,7 +630,7 @@ short sign_axis(int input)
 {
     uint8_t scaled = scale_axis(input);
 
-    int start = (int) scaled - 128;
+    int start = (int) scaled - 127;
     if ((start * 256) > 32765)
     {
         start = 32765;
@@ -664,20 +668,20 @@ int gc_origin_adjust(uint8_t value, int origin, bool invert)
 
     if(invert)
     {
-        out = 256 - ((int) value - origin);
+        out = 255 - ((int) value - origin);
     }
     else
     {
         out = (int) value - origin;
     }
 
-    if (out < 28)
+    if (out < 0)
     {
-        out = 28;
+        out = 0;
     }
-    else if (out > 227)
+    else if (out > 255)
     {
-        out = 227;
+        out = 255;
     }
 
     return out;
@@ -750,10 +754,10 @@ void dinput_send_data(void)
         di_input.buttons_1 = 0x00;
         di_input.buttons_2 = 0x00;
         di_input.dpad_hat = NS_HAT_CENTER;
-        di_input.stick_left_x = 128;
-        di_input.stick_left_y = 128;
-        di_input.stick_right_x = 128;
-        di_input.stick_right_y = 128;
+        di_input.stick_left_x = 127;
+        di_input.stick_left_y = 127;
+        di_input.stick_right_x = 127;
+        di_input.stick_right_y = 127;
         di_input.analog_trigger_l = 0;
         di_input.analog_trigger_r = 0;
     }
@@ -967,10 +971,10 @@ void gc_send_data(void)
     {
         gc_input.buttons_1 = 0x00;
         gc_input.buttons_2 = 0x00;
-        gc_input.stick_x = 128;
-        gc_input.stick_y = 128;
-        gc_input.cstick_x = 128;
-        gc_input.cstick_y = 128;
+        gc_input.stick_x    = 127;
+        gc_input.stick_y    = 127;
+        gc_input.cstick_x   = 127;
+        gc_input.cstick_y   = 127;
         gc_input.trigger_l = 0;
         gc_input.trigger_r = 0;
     }
@@ -1101,10 +1105,10 @@ void ns_send_data(void)
         ns_input.buttons_1      = 0x00;
         ns_input.buttons_2      = 0x00;
         ns_input.dpad_hat       = NS_HAT_CENTER;
-        ns_input.stick_left_x   = 128;
-        ns_input.stick_left_y   = 128;
-        ns_input.stick_right_x  = 128;
-        ns_input.stick_left_y   = 128;
+        ns_input.stick_left_x   = 127;
+        ns_input.stick_left_y   = 127;
+        ns_input.stick_right_x  = 127;
+        ns_input.stick_left_y   = 127;
     }
     else
     {

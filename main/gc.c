@@ -234,12 +234,12 @@ void gamecube_rmt_process(void)
 
                 gc_origin_data.data_set = true;
 
-                // Subtract the data we got from 128. This will tell us how off we are from center.
+                // Subtract the data we got with 127. This will tell us how off we are from center.
                 // A negative value is fine.
-                gc_origin_data.stick_x      = (int) gc_poll_response.stick_x - 128;
-                gc_origin_data.stick_y      = (int) gc_poll_response.stick_y - 128;
-                gc_origin_data.cstick_x     = (int) gc_poll_response.cstick_x - 128;
-                gc_origin_data.cstick_y     = (int) gc_poll_response.cstick_y - 128;
+                gc_origin_data.stick_x      = (int) gc_poll_response.stick_x - 127;
+                gc_origin_data.stick_y      = (int) gc_poll_response.stick_y - 127;
+                gc_origin_data.cstick_x     = (int) gc_poll_response.cstick_x - 127;
+                gc_origin_data.cstick_y     = (int) gc_poll_response.cstick_y - 127;
                 gc_origin_data.trigger_l    = gc_poll_response.trigger_l;
                 gc_origin_data.trigger_r    = gc_poll_response.trigger_r;
 
