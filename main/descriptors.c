@@ -12,6 +12,6 @@ uint8_t     ns_buffer[NS_HID_LEN]    = {0};
 gc_input_s  gc_input                = {0};
 uint8_t     gc_buffer[GC_HID_LEN]   = {0};
 
-// xInput mode
-xi_input_s  xi_input                = {0};
-uint8_t     xi_buffer[XI_HID_LEN]   = {0};
+// XInput Legacy Mode
+xid_input_s xid_input               = {0};
+uint8_t     xid_buffer[XID_REPORT_LEN] = {0};

@@ -39,6 +39,7 @@
 #include "class/vendor/vendor_device.h"
 #include "tusb_tasks.h"
 #include "device/usbd_pvt.h"
+#include "xinput_device.h"
 
 // FreeRTOS
 #include "freertos/FreeRTOS.h"

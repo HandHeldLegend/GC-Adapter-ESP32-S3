@@ -31,7 +31,7 @@ extern legacy_rmt_mem_t RMTMEM;
 
 #define JB_LOW      (rmt_item32_t) {{{ JB_0L_TICKS,      0, JB_0H_TICKS, 1 }}}
 #define JB_HIGH     (rmt_item32_t) {{{ JB_1L_TICKS,      0, JB_1H_TICKS, 1 }}}
-#define JB_STOP     (rmt_item32_t) {{{ JB_STOP_TICKS,    0, 0,           1 }}}
+#define JB_STOP     (rmt_item32_t) {{{ JB_STOP_TICKS,    0, 0,           0 }}}
 
 #define JB_RMT_0X0  JB_LOW, JB_LOW, JB_LOW, JB_LOW
 #define JB_RMT_0X1  JB_LOW, JB_LOW, JB_LOW, JB_HIGH 

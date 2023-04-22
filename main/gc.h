@@ -24,6 +24,7 @@ extern rmt_item32_t gcmd_poll_rmt[GCMD_POLL_LEN];
 extern gc_cmd_phase_t cmd_phase;
 extern gc_usb_phase_t usb_phase;
 extern usb_mode_t active_usb_mode;
+extern gc_type_t active_gc_type;
 
 typedef struct
 {
@@ -45,7 +46,8 @@ typedef struct
             uint8_t button_x        : 1;
             uint8_t button_y        : 1;
             uint8_t button_start    : 1;
-            uint8_t b1blank         : 3;  
+            uint8_t wavebird_connected : 1;
+            uint8_t b1blank         : 2;  
         };
         uint8_t buttons_1;
     };
@@ -93,8 +95,12 @@ extern volatile bool        rx_recieved;
 extern volatile uint32_t    rx_offset;
 extern volatile bool rx_vibrate;
 
+extern float analog_scaler_f;
+
 // Hold the origin data for a session
 extern gc_origin_data_s     gc_origin_data;
+
+void gamecube_convert_analog_scaler(void);
 
 esp_err_t gamecube_rmt_init(void);
 

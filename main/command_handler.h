@@ -31,6 +31,7 @@ typedef enum
     CMD_SETTINGS_ZJUMP              = 0x06,
     CMD_SETTINGS_SETTINGVERSION     = 0x07,
     CMD_SETTINGS_FWVERSION          = 0x08,
+    CMD_SETTINGS_ANALOGSENSITIVITY = 0x09,
 } settings_cmd_t;
 
 extern bool cmd_flagged;

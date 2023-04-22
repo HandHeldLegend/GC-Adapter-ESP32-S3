@@ -16,9 +16,10 @@ typedef enum
 
 typedef enum
 {
-    GC_TYPE_WIRED,
+    GC_TYPE_UNKNOWN = 0x00,
+    GC_TYPE_WIRED = 0x09,
+    GC_TYPE_WAVEBIRD = 0xE9,
     GC_TYPE_KEYBOARD,
-    GC_TYPE_UNKNOWN
 } gc_type_t;
 
 typedef enum

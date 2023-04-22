@@ -1,5 +1,7 @@
 #include "rgb_animator.h"
 
+rgb_s mode_color = {0};
+
 rgb_s last_color = {0};
 rgb_s current_color = {0};
 rgb_s next_color = {0};

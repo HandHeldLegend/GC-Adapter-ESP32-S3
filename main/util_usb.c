@@ -1,6 +1,7 @@
 #include "util_usb.h"
 
 usb_mode_t adapter_mode         = USB_MODE_NS;
+uint16_t usb_timeout_time       = 0;
 
 /************* TinyUSB descriptors ****************/
 
@@ -82,8 +83,8 @@ const uint8_t dinput_hid_report_descriptor[] = {
             0x09, 0x31,        //   Usage (Y)
             0x09, 0x32,        //   Usage (Z)
             0x09, 0x35,        //   Usage (Rz)
-            0x09, 0x33,        //   Usage (Rx)
-            0x09, 0x34,        //   Usage (Ry)
+            0x09, 0x36,        //   Usage (Slider)
+            0x09, 0x37,        //   Usage (Dial)
 
             0x75, 0x08,        //   Report Size (8)
             0x95, 0x06,        //   Report Count (6)
@@ -353,233 +354,6 @@ static const tinyusb_config_t gc_cfg = {
 /**--------------------------**/
 
 
-/** XBOX HID MODE (NOT QUITE XINPUT) **/
-// 1. Device Descriptor
-// 2. HID Report Descriptor
-// 3. Configuration Descriptor
-// 4. TinyUSB Config
-/**--------------------------**/
-
-/**** xInput Device Descriptor ****/
-static const tusb_desc_device_t xi_device_descriptor = {
-    .bLength = 18,
-    .bDescriptorType = TUSB_DESC_DEVICE,
-    .bcdUSB = 0x0200,
-    .bDeviceClass = TUSB_CLASS_HID,
-    .bDeviceSubClass = 0xFF,
-    .bDeviceProtocol = 0xFF,
-
-    .bMaxPacketSize0 = 64,
-    .idVendor = 0x045E,
-    .idProduct = 0x0b20,
-    .idProduct = 0xB13,
-
-    .bcdDevice = 0x0572,
-    .iManufacturer = 0x01,
-    .iProduct = 0x02,
-    .iSerialNumber = 0x03,
-    .bNumConfigurations = 0x01
-};
-
-// XInput HID Descriptor
-const uint8_t xinput_hid_report_descriptor[] = {
-    0x05, 0x01,        // Usage Page (Generic Desktop Ctrls)
-    0x09, 0x05,        // Usage (Game Pad)
-    0xA1, 0x01,        // Collection (Application)
-
-    // Byte 0
-    0x85, 0x01,        //   Report ID (1)
-
-    // Bytes 1, 2, 3, 4 for left stick X and Y
-    0x09, 0x01,        //   Usage (Pointer)
-    0xA1, 0x00,        //   Collection (Physical)
-    0x09, 0x30,        //     Usage (X)
-    0x09, 0x31,        //     Usage (Y)
-    0x15, 0x00,        //     Logical Minimum (0)
-    0x27, 0xFF, 0xFF, 0x00, 0x00,  //     Logical Maximum (65534)
-    0x95, 0x02,        //     Report Count (2)
-    0x75, 0x10,        //     Report Size (16)
-    0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-    0xC0,              //   End Collection
-
-    // Bytes 4, 5, 6, 7 for right stick X and Y
-    0x09, 0x01,        //   Usage (Pointer)
-    0xA1, 0x00,        //   Collection (Physical)
-    0x09, 0x33,        //     Usage (Rx)
-    0x09, 0x34,        //     Usage (Ry)
-    0x15, 0x00,        //     Logical Minimum (0)
-    0x27, 0xFF, 0xFF, 0x00, 0x00,  //     Logical Maximum (65534)
-    0x95, 0x02,        //     Report Count (2)
-    0x75, 0x10,        //     Report Size (16)
-    0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-    0xC0,              //   End Collection
-
-    // Bytes 8, 9 for left analog trigger
-    0x05, 0x01,        //   Usage Page (Generic Desktop Ctrls)
-    0x09, 0x32,        //   Usage (Z)
-    0x15, 0x00,        //   Logical Minimum (0)
-    0x26, 0xFF, 0x03,  //   Logical Maximum (1023)
-    0x95, 0x01,        //   Report Count (1)
-    0x75, 0x0A,        //   Report Size (10)
-    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-    0x15, 0x00,        //   Logical Minimum (0)
-    0x25, 0x00,        //   Logical Maximum (0)
-    0x75, 0x06,        //   Report Size (6)
-    0x95, 0x01,        //   Report Count (1)
-    0x81, 0x03,        //   Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-
-    // Bytes 10, 11 for right analog trigger
-    0x05, 0x01,        //   Usage Page (Generic Desktop Ctrls)
-    0x09, 0x35,        //   Usage (Rz)
-    0x15, 0x00,        //   Logical Minimum (0)
-    0x26, 0xFF, 0x03,  //   Logical Maximum (1023)
-    0x95, 0x01,        //   Report Count (1)
-    0x75, 0x0A,        //   Report Size (10)
-    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-    0x15, 0x00,        //   Logical Minimum (0)
-    0x25, 0x00,        //   Logical Maximum (0)
-    0x75, 0x06,        //   Report Size (6)
-    0x95, 0x01,        //   Report Count (1)
-    0x81, 0x03,        //   Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-
-    // Byte 12 for Hat switch for dpad 
-    0x05, 0x01,        //   Usage Page (Generic Desktop Ctrls)
-    0x09, 0x39,        //   Usage (Hat switch)
-    0x15, 0x01,        //   Logical Minimum (1)
-    0x25, 0x08,        //   Logical Maximum (8)
-    0x35, 0x00,        //   Physical Minimum (0)
-    0x46, 0x3B, 0x01,  //   Physical Maximum (315)
-    0x66, 0x14, 0x00,  //   Unit (System: English Rotation, Length: Centimeter)
-    0x75, 0x04,        //   Report Size (4)
-    0x95, 0x01,        //   Report Count (1)
-    0x81, 0x03,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,Null State)
-    0x75, 0x04,        //   Report Size (4)
-    0x95, 0x01,        //   Report Count (1)
-    0x15, 0x00,        //   Logical Minimum (0)
-    0x25, 0x00,        //   Logical Maximum (0)
-    0x35, 0x00,        //   Physical Minimum (0)
-    0x45, 0x00,        //   Physical Maximum (0)
-    0x65, 0x00,        //   Unit (None)
-    0x81, 0x03,        //   Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-
-    // Bytes 13 and 14 for buttons_1
-    0x05, 0x09,        //   Usage Page (Button)
-    0x19, 0x01,        //   Usage Minimum (0x01)
-    0x29, 0x0A,        //   Usage Maximum (0x0A)
-    0x15, 0x00,        //   Logical Minimum (0)
-    0x25, 0x01,        //   Logical Maximum (1)
-    0x75, 0x01,        //   Report Size (1)
-    0x95, 0x0A,        //   Report Count (10)
-    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-    0x15, 0x00,        //   Logical Minimum (0)
-    0x25, 0x00,        //   Logical Maximum (0)
-    0x75, 0x06,        //   Report Size (6)
-    0x95, 0x01,        //   Report Count (1)
-    0x81, 0x03,        //   Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-
-    0x05, 0x01,        //   Usage Page (Generic Desktop Ctrls)
-    0x09, 0x80,        //   Usage (Sys Control)
-    0x85, 0x02,        //   Report ID (2)
-    0xA1, 0x00,        //   Collection (Physical)
-    0x09, 0x85,        //     Usage (Sys Main Menu)
-    0x15, 0x00,        //     Logical Minimum (0)
-    0x25, 0x01,        //     Logical Maximum (1)
-    0x95, 0x01,        //     Report Count (1)
-    0x75, 0x01,        //     Report Size (1)
-    0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-    0x15, 0x00,        //     Logical Minimum (0)
-    0x25, 0x00,        //     Logical Maximum (0)
-    0x75, 0x07,        //     Report Size (7)
-    0x95, 0x01,        //     Report Count (1)
-    0x81, 0x03,        //     Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-    0xC0,              //   End Collection
-
-    0x05, 0x0F,        //   Usage Page (PID Page)
-    0x09, 0x21,        //   Usage (0x21)
-
-    0x85, 0x03,        //   Report ID (3)
-
-    0xA1, 0x02,        //   Collection (Logical)
-    0x09, 0x97,        //     Usage (0x97)
-    0x15, 0x00,        //     Logical Minimum (0)
-    0x25, 0x01,        //     Logical Maximum (1)
-    0x75, 0x04,        //     Report Size (4)
-    0x95, 0x01,        //     Report Count (1)
-    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
-    0x15, 0x00,        //     Logical Minimum (0)
-    0x25, 0x00,        //     Logical Maximum (0)
-    0x75, 0x04,        //     Report Size (4)
-    0x95, 0x01,        //     Report Count (1)
-    0x91, 0x03,        //     Output (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
-    0x09, 0x70,        //     Usage (0x70)
-    0x15, 0x00,        //     Logical Minimum (0)
-    0x25, 0x64,        //     Logical Maximum (100)
-    0x75, 0x08,        //     Report Size (8)
-    0x95, 0x04,        //     Report Count (4)
-    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
-    0x09, 0x50,        //     Usage (0x50)
-    0x66, 0x01, 0x10,  //     Unit (System: SI Linear, Time: Seconds)
-    0x55, 0x0E,        //     Unit Exponent (-2)
-    0x15, 0x00,        //     Logical Minimum (0)
-    0x26, 0xFF, 0x00,  //     Logical Maximum (255)
-    0x75, 0x08,        //     Report Size (8)
-    0x95, 0x01,        //     Report Count (1)
-    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
-    0x09, 0xA7,        //     Usage (0xA7)
-    0x15, 0x00,        //     Logical Minimum (0)
-    0x26, 0xFF, 0x00,  //     Logical Maximum (255)
-    0x75, 0x08,        //     Report Size (8)
-    0x95, 0x01,        //     Report Count (1)
-    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
-    0x65, 0x00,        //     Unit (None)
-    0x55, 0x00,        //     Unit Exponent (0)
-    0x09, 0x7C,        //     Usage (0x7C)
-    0x15, 0x00,        //     Logical Minimum (0)
-    0x26, 0xFF, 0x00,  //     Logical Maximum (255)
-    0x75, 0x08,        //     Report Size (8)
-    0x95, 0x01,        //     Report Count (1)
-    0x91, 0x02,        //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
-    0xC0,              //   End Collection
-    0x85, 0x04,        //   Report ID (4)
-    0x05, 0x06,        //   Usage Page (Generic Dev Ctrls)
-    0x09, 0x20,        //   Usage (Battery Strength)
-    0x15, 0x00,        //   Logical Minimum (0)
-    0x26, 0xFF, 0x00,  //   Logical Maximum (255)
-    0x75, 0x08,        //   Report Size (8)
-    0x95, 0x01,        //   Report Count (1)
-    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-    0xC0,              // End Collection
-    // 306 bytes
-};
-
-/**** xInput Configuration Descriptor ****/
-#define XI_CGCDES_LEN   9 + 9 + 9 + 7 + 7
-static const uint8_t xi_configuration_descriptor[] = {
-    // Configuration number, interface count, string index, total length, attribute, power in mA
-    TUD_CONFIG_DESCRIPTOR(1, 1, 0, 41, TUSB_DESC_CONFIG_ATT_SELF_POWERED, 500),
-    // Interface
-    9, TUSB_DESC_INTERFACE, 0x00, 0x00, 0x02, TUSB_CLASS_HID, 0x00, 0x00, 0x00,
-    // HID Descriptor
-    9, HID_DESC_TYPE_HID, U16_TO_U8S_LE(0x0110), 0, 1, HID_DESC_TYPE_REPORT, U16_TO_U8S_LE(sizeof(xinput_hid_report_descriptor)),
-    // Endpoint Descriptor
-    7, TUSB_DESC_ENDPOINT, 0x81, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(32), 1,
-    // Endpoint Descriptor
-    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(33), 1,
-};
-
-static const tinyusb_config_t xi_cfg = {
-    .device_descriptor          = &xi_device_descriptor,
-    .string_descriptor          = global_string_descriptor,
-    .external_phy               = false,
-    .configuration_descriptor   = xi_configuration_descriptor,
-};
-
-/**--------------------------**/
-/**--------------------------**/
-
-
-
-
 /********* TinyUSB HID callbacks ***************/
 // Invoked when received GET_REPORT control request
 // Application must fill buffer report's content and return its length.
@@ -613,7 +387,7 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint8_t
             }
             break;
         case USB_MODE_XINPUT:
-            if (report[0] == 0x01)
+            if ( (report[0] == 0x00) && (report[1] == XID_REPORT_LEN))
             {
                 usb_process_data();
             }
@@ -669,11 +443,9 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_
         case USB_MODE_XINPUT:
             if (!report_id && !report_type)
             {
-                if (buffer[0] == 0x03 && buffer[1] == 0x0F)
+                if ((buffer[0] == 0x00) && (buffer[1] == 0x08))
                 {
-                    xi_rumble_s rumble = {};
-                    memcpy(&rumble, buffer, sizeof(xi_rumble_s));
-                    if (rumble.magnitude_l > 0 || rumble.magnitude_r > 0)
+                    if ((buffer[3] > 0) || (buffer[4] > 0))
                     {
                         rx_vibrate = 1;
                     }
@@ -695,9 +467,6 @@ uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance)
     switch (active_usb_mode)
     {
         default:
-        case USB_MODE_XINPUT:
-            return xinput_hid_report_descriptor;
-            break;
         case USB_MODE_NS:
             return ns_hid_report_descriptor;
             break;
@@ -709,6 +478,14 @@ uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance)
             break;
     }
     return NULL;
+}
+
+// Sets up custom TinyUSB Device Driver
+usbd_class_driver_t const *usbd_app_driver_get_cb(uint8_t *driver_count)
+{
+    ESP_LOGI("USB DRIVER CB", "Installing XInput Driver");
+    *driver_count += 1;
+    return &tud_xinput_driver;
 }
 
 /**
@@ -806,42 +583,66 @@ uint8_t dir_to_hat(hat_mode_t hat_type, uint8_t leftRight, uint8_t upDown)
     }
 }
 
-#define ANALOG_SCALER (float) 1.28
 uint8_t scale_axis(int input)
 {
     int res = input;
 
-    if (input > 228)
+    if (input > 255)
     {
-        input = 228;
+        input = 255;
     }
-    if (input < 28)
+    if (input < 0)
     {
-        input = 28;
+        input = 0;
     }
 
-    if (input > 129)
+    if (input > 127)
     {
-        float tmp = (float) input - 128;
-        tmp = tmp * ANALOG_SCALER;
-        res = (int) tmp + 128;
+        float tmp = (float) input - 127;
+        tmp = tmp * analog_scaler_f;
+        res = (int) tmp + 127;
     }
     else if (input < 127)
     {
-        float tmp = 128 - (float) input;
-        tmp = tmp * ANALOG_SCALER;
-        res = 128 - (int) tmp;    
+        float tmp = 127 - (float) input;
+        tmp = tmp * analog_scaler_f;
+        res = 127 - (int) tmp;    
+    }
+    else
+    {
+        res = 127;
     }
     
-    if (res >= 255)
+    if (res > 255)
     {
         res = 255;
     }
-    if (res <= 0)
+    if (res < 0)
     {
         res = 0;
     }
     return (uint8_t) res;
+}
+
+#define SIGNED_SCALER (float) 
+short sign_axis(int input)
+{
+    uint8_t scaled = scale_axis(input);
+
+    int start = (int) scaled - 127;
+    if ((start * 256) > 32765)
+    {
+        start = 32765;
+    }
+    else if ((start * 256) < -32765)
+    {
+        start = -32765;
+    }
+    else
+    {
+        start *= 256;
+    }
+    return (short) start;
 }
 
 uint8_t scale_trigger(int input)
@@ -858,6 +659,32 @@ uint8_t scale_trigger(int input)
     {
         return (uint8_t) 255;
     }
+}
+
+int gc_origin_adjust(uint8_t value, int origin, bool invert)
+{
+    int out = 0;
+
+    if(invert)
+    {
+        out = 255 - ((int) value - origin);
+    }
+    else
+    {
+        out = (int) value - origin;
+    }
+
+    if (out < 0)
+    {
+        out = 0;
+    }
+    else if (out > 255)
+    {
+        out = 255;
+    }
+
+    return out;
+    
 }
 
 void gcusb_start(usb_mode_t mode)
@@ -883,8 +710,8 @@ void gcusb_start(usb_mode_t mode)
             break;
 
         case USB_MODE_XINPUT:
-            ESP_LOGI(TAG, "XINPUT MODE");
-            ESP_ERROR_CHECK(tinyusb_driver_install(&xi_cfg));
+            ESP_LOGI(TAG, "LEGACY XINPUT MODE");
+            ESP_ERROR_CHECK(xinput_driver_install());
             break;
     }
 
@@ -892,9 +719,19 @@ void gcusb_start(usb_mode_t mode)
     {
         vTaskDelay(8/portTICK_PERIOD_MS);
     }
-    while (!tud_hid_ready())
+    if (mode != USB_MODE_XINPUT)
     {
-        vTaskDelay(8/portTICK_PERIOD_MS);
+        while (!tud_hid_ready())
+        {
+            vTaskDelay(8/portTICK_PERIOD_MS);
+        }
+    }
+    else
+    {
+        while(!tud_xinput_ready())
+            {
+                vTaskDelay(8/portTICK_PERIOD_MS);
+            }
     }
     vTaskDelay(250/portTICK_PERIOD_MS);
     usb_send_data();
@@ -916,10 +753,10 @@ void dinput_send_data(void)
         di_input.buttons_1 = 0x00;
         di_input.buttons_2 = 0x00;
         di_input.dpad_hat = NS_HAT_CENTER;
-        di_input.stick_left_x = 128;
-        di_input.stick_left_y = 128;
-        di_input.stick_right_x = 128;
-        di_input.stick_right_y = 128;
+        di_input.stick_left_x = 127;
+        di_input.stick_left_y = 127;
+        di_input.stick_right_x = 127;
+        di_input.stick_right_y = 127;
         di_input.analog_trigger_l = 0;
         di_input.analog_trigger_r = 0;
     }
@@ -957,8 +794,8 @@ void dinput_send_data(void)
         di_input.button_plus = gc_poll_response.button_start;
 
         // Get origin modified Trigger analog data
-        adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
-        adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
+        adj_tl  = gc_origin_adjust(gc_poll_response.trigger_l, gc_origin_data.trigger_l,  false);
+        adj_tr  = gc_origin_adjust(gc_poll_response.trigger_r, gc_origin_data.trigger_r,  false);
 
         switch( adapter_settings.di_trigger_l)
         {
@@ -1008,10 +845,10 @@ void dinput_send_data(void)
                 break;
         }
         
-        adj_x   = (int) gc_poll_response.stick_x - gc_origin_data.stick_x;
-        adj_y   = (int) gc_poll_response.stick_y - gc_origin_data.stick_y;
-        adj_cx  = (int) gc_poll_response.cstick_x - gc_origin_data.cstick_x;
-        adj_cy  = (int) gc_poll_response.cstick_y - gc_origin_data.cstick_y;
+        adj_x   = gc_origin_adjust(gc_poll_response.stick_x,  gc_origin_data.stick_x,     false);
+        adj_y   = gc_origin_adjust(gc_poll_response.stick_y,  gc_origin_data.stick_y,     true);
+        adj_cx  = gc_origin_adjust(gc_poll_response.cstick_x, gc_origin_data.cstick_x,    false);
+        adj_cy  = gc_origin_adjust(gc_poll_response.cstick_y, gc_origin_data.cstick_y,    false);
 
         di_input.stick_left_x   = (uint8_t) adj_x;
         di_input.stick_left_y   = (uint8_t) adj_y;
@@ -1024,74 +861,81 @@ void dinput_send_data(void)
 
 void xinput_send_data(void)
 {
-    xi_input.report_id = 0x01;
+    xid_input.report_id = 0x00;
+    xid_input.report_size = 20;
 
     if (cmd_phase != CMD_PHASE_POLL)
     {
-        xi_input.dpad_hat = XI_HAT_CENTER;
-        xi_input.buttons_1 = 0x00;
-        xi_input.buttons_2 = 0x00;
-        xi_input.stick_left_x = 32768;
-        xi_input.stick_left_y = 32768;
-        xi_input.stick_right_x = 32768;
-        xi_input.stick_right_y = 32768;
-        xi_input.analog_trigger_l = 0;
-        xi_input.analog_trigger_r = 0;
+        xid_input.buttons_1 = 0x00;
+        xid_input.buttons_2 = 0x00;
+        xid_input.stick_left_x = 0;
+        xid_input.stick_left_y = 0;
+        xid_input.stick_right_x = 0;
+        xid_input.stick_right_y = 0;
+        xid_input.analog_trigger_l = 0;
+        xid_input.analog_trigger_r = 0;
     }
     else
     {
 
         uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
-        xi_input.button_menu = !util_getbit(regread, NEXT_BUTTON);
-        xi_input.button_back = !util_getbit(regread, PREV_BUTTON);
+        xid_input.button_guide = !util_getbit(regread, NEXT_BUTTON);
+        xid_input.button_back =  !util_getbit(regread, PREV_BUTTON);
 
-        xi_input.button_a = gc_poll_response.button_a;
-        xi_input.button_b = gc_poll_response.button_b;
+        xid_input.button_a = gc_poll_response.button_a;
+        xid_input.button_b = gc_poll_response.button_b;
+
+        xid_input.dpad_left     = gc_poll_response.dpad_left;
+        xid_input.dpad_right    = gc_poll_response.dpad_right;
+        xid_input.dpad_down     = gc_poll_response.dpad_down;
+        xid_input.dpad_up       = gc_poll_response.dpad_up;
 
         //Defaults
-        xi_input.button_y       = gc_poll_response.button_y;
-        xi_input.button_x       = gc_poll_response.button_x;
-        xi_input.bumper_r       = gc_poll_response.button_z;
+        xid_input.button_y       = gc_poll_response.button_y;
+        xid_input.button_x       = gc_poll_response.button_x;
+        xid_input.bumper_r       = gc_poll_response.button_z;
+        xid_input.bumper_l       = 0;
+        xid_input.button_menu    = 0;
 
         if (adapter_settings.xi_zjump == 1)
         {
-            xi_input.button_x       = gc_poll_response.button_z;
-            xi_input.bumper_r       = gc_poll_response.button_x;
+            xid_input.button_x       = gc_poll_response.button_z;
+            xid_input.bumper_r       = gc_poll_response.button_x;
         }
         else if (adapter_settings.xi_zjump == 2)
         {
-            xi_input.button_y       = gc_poll_response.button_z;
-            xi_input.bumper_r       = gc_poll_response.button_y;
+            xid_input.button_y       = gc_poll_response.button_z;
+            xid_input.bumper_r       = gc_poll_response.button_y;
         }
 
         if (gc_poll_response.button_start && gc_poll_response.button_z)
         {
-            xi_input.bumper_l = 1;
-            xi_input.bumper_r = 0;
-            xi_input.button_x = 0;
+            xid_input.bumper_l = 1;
+            xid_input.bumper_r = 0;
+            xid_input.button_x = 0;
         }
         else if (gc_poll_response.button_start)
         {
-            xi_input.button_menu = 1;
+            xid_input.button_menu = 1;
         }
 
-        adj_x   = (int) gc_poll_response.stick_x         - gc_origin_data.stick_x;
-        adj_y   = 256 - ((int) gc_poll_response.stick_y  - gc_origin_data.stick_y);
-        adj_cx  = (int) gc_poll_response.cstick_x        - gc_origin_data.cstick_x;
-        adj_cy  = 256 - ((int) gc_poll_response.cstick_y - gc_origin_data.cstick_y);
+        adj_x   = gc_origin_adjust(gc_poll_response.stick_x,  gc_origin_data.stick_x,     false);
+        adj_y   = gc_origin_adjust(gc_poll_response.stick_y,  gc_origin_data.stick_y,     true);
+        adj_cx  = gc_origin_adjust(gc_poll_response.cstick_x, gc_origin_data.cstick_x,    false);
+        adj_cy  = gc_origin_adjust(gc_poll_response.cstick_y, gc_origin_data.cstick_y,    true);
 
-        adj_tl  = (int) gc_poll_response.trigger_l       - gc_origin_data.trigger_l;
-        adj_tr  = (int) gc_poll_response.trigger_r       - gc_origin_data.trigger_r;
+        adj_tl  = gc_origin_adjust(gc_poll_response.trigger_l, gc_origin_data.trigger_l,  false);
+        adj_tr  = gc_origin_adjust(gc_poll_response.trigger_r, gc_origin_data.trigger_r,  false);
 
         switch( adapter_settings.xi_trigger_l)
         {
             default:
             case TRIG_MODE_OFF:
-                xi_input.analog_trigger_l = (uint16_t) scale_trigger(adj_tl)<<2;
+                xid_input.analog_trigger_l = scale_trigger(adj_tl);
                 break;
             
             case TRIG_MODE_A2D:
-                xi_input.analog_trigger_l   = (adj_tl >= adapter_settings.trigger_threshold_l) ? (255<<2) : (uint16_t) scale_trigger(adj_tl)<<2;
+                xid_input.analog_trigger_l   = gc_poll_response.button_l * 255;
                 break;
         }
 
@@ -1099,26 +943,21 @@ void xinput_send_data(void)
         {
             default:
             case TRIG_MODE_OFF:
-                xi_input.analog_trigger_r = (uint16_t) scale_trigger(adj_tr)<<2;
+                xid_input.analog_trigger_r = scale_trigger(adj_tr);
                 break;
             
             case TRIG_MODE_A2D:
-                xi_input.analog_trigger_r   = (adj_tr >= adapter_settings.trigger_threshold_r) ? (255<<2) : (uint16_t) scale_trigger(adj_tr)<<2;
+                xid_input.analog_trigger_r   = gc_poll_response.button_r * 255;
                 break;
         }
 
-        xi_input.stick_left_x   = (uint16_t) scale_axis(adj_x)  << 8;
-        xi_input.stick_left_y   = (uint16_t) scale_axis(adj_y)  << 8;
-        xi_input.stick_right_x  = (uint16_t) scale_axis(adj_cx) << 8;
-        xi_input.stick_right_y  = (uint16_t) scale_axis(adj_cy) << 8;
-
-        uint8_t lr = 1 - gc_poll_response.dpad_left + gc_poll_response.dpad_right;
-        uint8_t ud = 1 - gc_poll_response.dpad_down + gc_poll_response.dpad_up;
-
-        xi_input.dpad_hat = dir_to_hat(HAT_MODE_XI, lr, ud);
+        xid_input.stick_left_x   = sign_axis(adj_x);
+        xid_input.stick_left_y   = sign_axis(adj_y)*-1;
+        xid_input.stick_right_x  = sign_axis(adj_cx);
+        xid_input.stick_right_y  = sign_axis(adj_cy)*-1;
     }
 
-    tud_hid_report(0, &xi_input, XI_HID_LEN);
+    tud_xinput_report(&xid_input, XID_REPORT_LEN);
 
 }
 
@@ -1131,10 +970,10 @@ void gc_send_data(void)
     {
         gc_input.buttons_1 = 0x00;
         gc_input.buttons_2 = 0x00;
-        gc_input.stick_x = 128;
-        gc_input.stick_y = 128;
-        gc_input.cstick_x = 128;
-        gc_input.cstick_y = 128;
+        gc_input.stick_x    = 127;
+        gc_input.stick_y    = 127;
+        gc_input.cstick_x   = 127;
+        gc_input.cstick_y   = 127;
         gc_input.trigger_l = 0;
         gc_input.trigger_r = 0;
     }
@@ -1167,8 +1006,8 @@ void gc_send_data(void)
             gc_input.button_z       = gc_poll_response.button_y;
         }
 
-        adj_tl  = (int) gc_poll_response.trigger_l  - gc_origin_data.trigger_l;
-        adj_tr  = (int) gc_poll_response.trigger_r  - gc_origin_data.trigger_r;
+        adj_tl  = gc_origin_adjust(gc_poll_response.trigger_l, gc_origin_data.trigger_l,  false);
+        adj_tr  = gc_origin_adjust(gc_poll_response.trigger_r, gc_origin_data.trigger_r,  false);
 
         switch( adapter_settings.gc_trigger_l)
         {
@@ -1218,10 +1057,10 @@ void gc_send_data(void)
                 break;
         }
 
-        adj_x   = (int) gc_poll_response.stick_x    - gc_origin_data.stick_x;
-        adj_y   = (int) gc_poll_response.stick_y    - gc_origin_data.stick_y;
-        adj_cx  = (int) gc_poll_response.cstick_x   - gc_origin_data.cstick_x;
-        adj_cy  = (int) gc_poll_response.cstick_y   - gc_origin_data.cstick_y;
+        adj_x   = gc_origin_adjust(gc_poll_response.stick_x,  gc_origin_data.stick_x,     false);
+        adj_y   = gc_origin_adjust(gc_poll_response.stick_y,  gc_origin_data.stick_y,     false);
+        adj_cx  = gc_origin_adjust(gc_poll_response.cstick_x, gc_origin_data.cstick_x,    false);
+        adj_cy  = gc_origin_adjust(gc_poll_response.cstick_y, gc_origin_data.cstick_y,    false);
 
         gc_input.stick_x        = (uint8_t) adj_x;
         gc_input.stick_y        = (uint8_t) adj_y;
@@ -1265,10 +1104,10 @@ void ns_send_data(void)
         ns_input.buttons_1      = 0x00;
         ns_input.buttons_2      = 0x00;
         ns_input.dpad_hat       = NS_HAT_CENTER;
-        ns_input.stick_left_x   = 128;
-        ns_input.stick_left_y   = 128;
-        ns_input.stick_right_x  = 128;
-        ns_input.stick_left_y   = 128;
+        ns_input.stick_left_x   = 127;
+        ns_input.stick_left_y   = 127;
+        ns_input.stick_right_x  = 127;
+        ns_input.stick_left_y   = 127;
     }
     else
     {
@@ -1303,8 +1142,8 @@ void ns_send_data(void)
 
         ns_input.button_plus = gc_poll_response.button_start;
 
-        adj_tl  = (int) gc_poll_response.trigger_l - gc_origin_data.trigger_l;
-        adj_tr  = (int) gc_poll_response.trigger_r - gc_origin_data.trigger_r;
+        adj_tl  = gc_origin_adjust(gc_poll_response.trigger_l, gc_origin_data.trigger_l,  false);
+        adj_tr  = gc_origin_adjust(gc_poll_response.trigger_r, gc_origin_data.trigger_r,  false);
 
         switch( adapter_settings.ns_trigger_l)
         {
@@ -1329,11 +1168,11 @@ void ns_send_data(void)
                 ns_input.trigger_zr = (adj_tr >= adapter_settings.trigger_threshold_r) ? 1 : 0;
                 break;
         }
-        
-        adj_x   = (int) gc_poll_response.stick_x - gc_origin_data.stick_x;
-        adj_y   = 256 - ( (int) gc_poll_response.stick_y - gc_origin_data.stick_y );
-        adj_cx  = (int) gc_poll_response.cstick_x - gc_origin_data.cstick_x;
-        adj_cy  = 256 - ( (int) gc_poll_response.cstick_y - gc_origin_data.cstick_y ); 
+
+        adj_x   = gc_origin_adjust(gc_poll_response.stick_x,  gc_origin_data.stick_x,     false);
+        adj_y   = gc_origin_adjust(gc_poll_response.stick_y,  gc_origin_data.stick_y,     true);
+        adj_cx  = gc_origin_adjust(gc_poll_response.cstick_x, gc_origin_data.cstick_x,    false);
+        adj_cy  = gc_origin_adjust(gc_poll_response.cstick_y, gc_origin_data.cstick_y,    true);
 
         ns_input.stick_left_x   = scale_axis(adj_x);
         ns_input.stick_left_y   = scale_axis(adj_y);
@@ -1347,6 +1186,10 @@ void ns_send_data(void)
 
 void usb_send_data(void)
 {
+    if (!tud_ready())
+    {
+        return;
+    }
     // Send USB data according to the adapter mode
     switch (active_usb_mode)
     {
@@ -1408,9 +1251,10 @@ void rmt_reset()
     JB_TX_CLEARISR  = 1;
 }
 
-// This is called after each successfull USB report send.
+// This is called after each successful USB report send.
 void usb_process_data(void)
 {
+    usb_timeout_time = 0;
     // Check if we have config data to send out
     if(cmd_flagged)
     {
@@ -1423,8 +1267,14 @@ void usb_process_data(void)
     
     if (cmd_phase == CMD_PHASE_POLL)
     {
-        //JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (rx_vibrate) ? JB_HIGH : JB_LOW;
-        JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (rx_vibrate == true) ? JB_HIGH : JB_LOW;
+        if (active_gc_type == GC_TYPE_WIRED)
+        {
+            JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (rx_vibrate == true) ? JB_HIGH : JB_LOW;
+        }
+        else if (active_gc_type == GC_TYPE_WAVEBIRD)
+        {
+            JB_TX_MEM[GC_POLL_VIBRATE_IDX] = JB_LOW;
+        }
 
         if (gc_timer_status == GC_TIMER_IDLE)
         {

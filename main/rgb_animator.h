@@ -15,6 +15,8 @@ typedef struct
     rgb_msg_t msg;
 } rgb_msg_s;
 
+extern rgb_s mode_color;
+
 void rgb_animate_to(rgb_s color);
 void rgb_animate_blink(rgb_s color);
 void rgb_animator_init();
