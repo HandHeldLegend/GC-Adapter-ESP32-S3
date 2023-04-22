@@ -583,7 +583,6 @@ uint8_t dir_to_hat(hat_mode_t hat_type, uint8_t leftRight, uint8_t upDown)
     }
 }
 
-#define ANALOG_SCALER (float) 1.27
 uint8_t scale_axis(int input)
 {
     int res = input;
@@ -600,13 +599,13 @@ uint8_t scale_axis(int input)
     if (input > 127)
     {
         float tmp = (float) input - 127;
-        tmp = tmp * ANALOG_SCALER;
+        tmp = tmp * analog_scaler_f;
         res = (int) tmp + 127;
     }
     else if (input < 127)
     {
         float tmp = 127 - (float) input;
-        tmp = tmp * ANALOG_SCALER;
+        tmp = tmp * analog_scaler_f;
         res = 127 - (int) tmp;    
     }
     else

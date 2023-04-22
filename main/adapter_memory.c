@@ -43,10 +43,23 @@ void load_adapter_settings(void)
         }
         if (adapter_settings.settings_version != SETTINGS_VERSION)
         {
-            ESP_LOGI(TAG, "Settings firmware version out of date. Setting to default...");
-            nvs_close(adapter_mem_handle);
-
-            load_adapter_defaults();
+            // HANDLE SETTINGS MIGRATION
+            if (adapter_settings.settings_version == SETTINGS_VERSION_OLD)
+            {
+                adapter_settings.settings_version = SETTINGS_VERSION;
+                adapter_settings.analog_scaler = 127;
+                // Set blob
+                nvs_set_blob(adapter_mem_handle, "adp_settings", &adapter_settings, sizeof(adapter_settings_s));
+                nvs_commit(adapter_mem_handle);
+                nvs_close(adapter_mem_handle);
+            }
+            else
+            {
+                ESP_LOGI(TAG, "Settings firmware version out of date. Setting to default...");
+                nvs_close(adapter_mem_handle);
+                load_adapter_defaults();
+            }
+            
             return;
         }
         else
@@ -80,6 +93,7 @@ void load_adapter_defaults(void)
         .trigger_threshold_l = 0xFF,
         .trigger_threshold_r = 0xFF,
         .zjump = 0x00,
+        .analog_scaler = 127,
     };
 
     const char* TAG = "load_adapter_defaults";

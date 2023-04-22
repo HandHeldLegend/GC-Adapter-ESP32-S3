@@ -95,8 +95,12 @@ extern volatile bool        rx_recieved;
 extern volatile uint32_t    rx_offset;
 extern volatile bool rx_vibrate;
 
+extern float analog_scaler_f;
+
 // Hold the origin data for a session
 extern gc_origin_data_s     gc_origin_data;
+
+void gamecube_convert_analog_scaler(void);
 
 esp_err_t gamecube_rmt_init(void);
 

@@ -39,12 +39,15 @@ void command_queue_process()
             uint16_t tmp = FIRMWARE_VERSION;
             memcpy(&cmd_buffer[1], &tmp, 2);
             break;
+
+        case CMD_SETTINGS_ANALOGSENSITIVITY:
+            cmd_buffer[1] = adapter_settings.analog_scaler;
+            break;
     }
 
     if (!cmd_queue_idx)
     {
         cmd_flagged = false;
-        
     }
     else
     {
@@ -83,7 +86,8 @@ void command_handler(const uint8_t *data, uint16_t bufsize)
             cmd_queue[3] = CMD_SETTINGS_ZJUMP;
             cmd_queue[4] = CMD_SETTINGS_SETTINGVERSION;
             cmd_queue[5] = CMD_SETTINGS_FWVERSION;
-            cmd_queue_idx = 5;
+            cmd_queue[6] = CMD_SETTINGS_ANALOGSENSITIVITY;
+            cmd_queue_idx = 6;
             cmd_flagged = true;
             break;
 
@@ -184,6 +188,11 @@ void command_handler(const uint8_t *data, uint16_t bufsize)
                     adapter_settings.xi_zjump = data[3];
                     break;
             }
+            break;
+
+        case CMD_SETTINGS_ANALOGSENSITIVITY:
+            adapter_settings.analog_scaler = data[2];
+            gamecube_convert_analog_scaler();
             break;
     }
 }

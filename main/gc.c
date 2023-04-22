@@ -35,6 +35,15 @@ volatile bool       rx_recieved     = false;
 volatile uint32_t   rx_offset       = 0;
 volatile bool       rx_vibrate    = false;
 
+float analog_scaler_f = 1.27;
+
+void gamecube_convert_analog_scaler()
+{
+    float start = adapter_settings.analog_scaler;
+    analog_scaler_f = start / 100;
+}
+
+
 static void gamecube_rmt_isr(void* arg) 
 {
     JB_RX_SYNC = JB_TX_STATISR;
