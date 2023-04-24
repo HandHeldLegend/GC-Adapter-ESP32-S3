@@ -273,6 +273,7 @@ void gamecube_rmt_process(void)
                 rx_offset = 0;
                 memset(&gc_poll_response, 0, sizeof(gc_poll_response));
 
+
                 // Handle edge case where Smash Box responds too quickly, dropping a bit.
                 // In this edge case the level would start as HIGH instead of low.
                 if (JB_RX_MEM[0].level0)

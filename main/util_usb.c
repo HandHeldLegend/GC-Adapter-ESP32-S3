@@ -970,10 +970,10 @@ void gc_send_data(void)
     {
         gc_input.buttons_1 = 0x00;
         gc_input.buttons_2 = 0x00;
-        gc_input.stick_x    = 127;
-        gc_input.stick_y    = 127;
-        gc_input.cstick_x   = 127;
-        gc_input.cstick_y   = 127;
+        gc_input.stick_x    = 128;
+        gc_input.stick_y    = 128;
+        gc_input.cstick_x   = 128;
+        gc_input.cstick_y   = 128;
         gc_input.trigger_l = 0;
         gc_input.trigger_r = 0;
     }
@@ -1211,7 +1211,7 @@ void usb_send_data(void)
 
 // Some definitions for USB Timing
 #define TIME_USB_US 22
-#define TIME_GC_POLL 410/2
+#define TIME_GC_POLL 420
 #define TIMEOUT_GC_US 500
 #define TIMEOUT_COUNTS 10
 
@@ -1228,13 +1228,56 @@ in a given scenario.
 
 // This is our time counter that we can use
 // for calculations
-uint64_t usb_delay_time = 0;
+uint32_t usb_delay_time = 0;
 
 // This is the calculated delay we add
 // We only add this when we enter POLLING
-uint64_t usb_time_offset = 50;
+uint32_t usb_time_offset = 50;
 
-uint64_t rmt_poll_time = 0;
+
+#define TIME_DEFAULT 300
+#define TIME_MAX_DEFAULT 7500
+#define TIME_COUNT_AVG 10
+uint32_t time_avg = 50;
+uint32_t time_logs[TIME_COUNT_AVG] = {0};
+uint8_t time_idx = 0;
+uint32_t time_count = 0;
+// This functions as a rolling average for the time
+void usb_rolling_avg_time(uint32_t time_log, bool reset, uint32_t* time_out)
+{
+    if (reset)
+    {
+        time_count = 0;
+        time_avg = 50;
+        *time_out = TIME_DEFAULT;
+        time_idx = 0;
+    }
+    else if (time_count < TIME_COUNT_AVG)
+    {
+        time_logs[time_count] = time_log;
+        time_count += 1;
+        *time_out = TIME_DEFAULT;
+    }
+    else
+    {
+        time_logs[time_idx] = time_log;
+        time_idx += 1;
+        if (time_idx >= TIME_COUNT_AVG)
+        {
+            time_idx = 0;
+        }
+        int avg = 0;
+        // Calculate and put out average
+        for(uint8_t i = 0; i < TIME_COUNT_AVG; i++)
+        {
+            avg += (int) time_logs[i];
+        }
+
+        avg /= TIME_COUNT_AVG;
+        avg -= TIME_GC_POLL - TIME_USB_US;
+        *time_out = (uint32_t) avg;
+    }
+}
 
 void rmt_reset()
 {
@@ -1254,12 +1297,15 @@ void rmt_reset()
 // This is called after each successful USB report send.
 void usb_process_data(void)
 {
+    // Reset USB timeout watchdog timer
     usb_timeout_time = 0;
+
     // Check if we have config data to send out
     if(cmd_flagged)
     {
         gc_timer_stop();
         gc_timer_reset();
+        usb_rolling_avg_time(0, true, &usb_time_offset);
         command_queue_process();
         rmt_reset();
         return;
@@ -1285,19 +1331,20 @@ void usb_process_data(void)
             gptimer_get_raw_count(gc_timer, &usb_delay_time);
             gc_timer_reset();
 
+            if (usb_delay_time >= TIME_MAX_DEFAULT)
+            {
+                usb_delay_time = TIME_MAX_DEFAULT;
+            }
             // Calculate new time delay that we use during polling for
             // perfectly centered polls (Only valid for above 2ms refresh)
             if (usb_delay_time >= 2500)
             {
-                usb_time_offset = (usb_delay_time/2) - TIME_GC_POLL - TIME_USB_US;
+                usb_rolling_avg_time(usb_delay_time, false, &usb_time_offset);
+                // Otherwise we know we're polling at 1ms and where we need to place the poll
+                ets_delay_us(usb_time_offset);
             }
-            // Otherwise we know we're polling at 1ms and where we need to place the poll
-            else
-            {   
-                usb_time_offset = 500-TIME_GC_POLL;
-            }
-
-            ets_delay_us(usb_time_offset);
+            else ets_delay_us(TIME_DEFAULT);
+            
         }
     }
     else
