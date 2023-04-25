@@ -13,13 +13,19 @@
 
 #define PIN_MASK_GCP ( (1ULL << NEXT_BUTTON) | (1ULL << PREV_BUTTON))
 
+#ifndef min
+#define min(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
 // Generics
 #include <stdlib.h>
+#include <stddef.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
 // ESP includes
+#include "esp_system.h"
 #include "esp_log.h"
 #include "esp_err.h"
 #include "esp_intr_alloc.h"

@@ -970,10 +970,10 @@ void gc_send_data(void)
     {
         gc_input.buttons_1 = 0x00;
         gc_input.buttons_2 = 0x00;
-        gc_input.stick_x    = 128;
-        gc_input.stick_y    = 128;
-        gc_input.cstick_x   = 128;
-        gc_input.cstick_y   = 128;
+        gc_input.stick_x    = 127;
+        gc_input.stick_y    = 127;
+        gc_input.cstick_x   = 127;
+        gc_input.cstick_y   = 127;
         gc_input.trigger_l = 0;
         gc_input.trigger_r = 0;
     }
@@ -1077,7 +1077,6 @@ void gc_send_data(void)
         - no controller, byte 1 is 0
         - controller plugged in to port 1, byte 1 is 0x10
         - controller plugged in port 2, byte 10 is 0x10
-
         with both USB plugged in
         - no controller, byte 1 is 0x04
         - controller plugged in to port 1, byte is 0x14 */
@@ -1214,70 +1213,59 @@ void usb_send_data(void)
 #define TIME_GC_POLL 420
 #define TIMEOUT_GC_US 500
 #define TIMEOUT_COUNTS 10
+#define TIMEOUT_MAX 7300
 
-#define TIME_ENDCAP_MAX 550
+#define TIME_COUNT_AVG 10
+#define TIME_DEFAULT 50
+uint64_t time_buffer[TIME_COUNT_AVG] = {0};
+uint8_t time_buffer_index = 0;
+uint8_t time_buffer_count = 0;
+uint64_t time_average = TIME_DEFAULT;
+
+void usb_rolling_average(uint64_t new_value, uint64_t* buffer, uint8_t* buffer_index, uint8_t* buffer_count, uint64_t* average)
+{
+    if (*buffer_count < TIME_COUNT_AVG)
+    {
+        buffer[*buffer_index] = new_value;
+        *buffer_count += 1;
+        *average = TIME_DEFAULT;
+        *buffer_index = (*buffer_index + 1) % TIME_COUNT_AVG;
+    }
+    else
+    {
+        buffer[*buffer_index] = new_value;
+        *buffer_index = (*buffer_index + 1) % TIME_COUNT_AVG;
+        *average = 0;
+        for (uint8_t i = 0; i < TIME_COUNT_AVG; i++)
+        {
+            *average += buffer[i];
+        }
+        *average /= TIME_COUNT_AVG;
+        *average -= (TIME_GC_POLL);
+        *average = min(*average, TIMEOUT_MAX);
+        
+    }
+}
+
+
 
 // The philosophy behind dynamic HID polling alignment
 /* 
 You have T1, which is the timestamp on which the RMT tx is started
 You have T2, which is the time it took for the USB packet to send
-
 We want to calculate the exact center of the minimum polling cycle
 in a given scenario.
 */
 
 // This is our time counter that we can use
 // for calculations
-uint32_t usb_delay_time = 0;
+uint64_t usb_delay_time = 0;
 
 // This is the calculated delay we add
 // We only add this when we enter POLLING
-uint32_t usb_time_offset = 50;
+uint64_t usb_time_offset = 50;
 
-
-#define TIME_DEFAULT 300
-#define TIME_MAX_DEFAULT 7500
-#define TIME_COUNT_AVG 10
-uint32_t time_avg = 50;
-uint32_t time_logs[TIME_COUNT_AVG] = {0};
-uint8_t time_idx = 0;
-uint32_t time_count = 0;
-// This functions as a rolling average for the time
-void usb_rolling_avg_time(uint32_t time_log, bool reset, uint32_t* time_out)
-{
-    if (reset)
-    {
-        time_count = 0;
-        time_avg = 50;
-        *time_out = TIME_DEFAULT;
-        time_idx = 0;
-    }
-    else if (time_count < TIME_COUNT_AVG)
-    {
-        time_logs[time_count] = time_log;
-        time_count += 1;
-        *time_out = TIME_DEFAULT;
-    }
-    else
-    {
-        time_logs[time_idx] = time_log;
-        time_idx += 1;
-        if (time_idx >= TIME_COUNT_AVG)
-        {
-            time_idx = 0;
-        }
-        int avg = 0;
-        // Calculate and put out average
-        for(uint8_t i = 0; i < TIME_COUNT_AVG; i++)
-        {
-            avg += (int) time_logs[i];
-        }
-
-        avg /= TIME_COUNT_AVG;
-        avg -= TIME_GC_POLL - TIME_USB_US;
-        *time_out = (uint32_t) avg;
-    }
-}
+uint64_t rmt_poll_time = 0;
 
 void rmt_reset()
 {
@@ -1297,15 +1285,12 @@ void rmt_reset()
 // This is called after each successful USB report send.
 void usb_process_data(void)
 {
-    // Reset USB timeout watchdog timer
     usb_timeout_time = 0;
-
     // Check if we have config data to send out
     if(cmd_flagged)
     {
         gc_timer_stop();
         gc_timer_reset();
-        usb_rolling_avg_time(0, true, &usb_time_offset);
         command_queue_process();
         rmt_reset();
         return;
@@ -1329,22 +1314,23 @@ void usb_process_data(void)
         else if (gc_timer_status == GC_TIMER_STARTED)
         {
             gptimer_get_raw_count(gc_timer, &usb_delay_time);
+            usb_rolling_average(usb_delay_time, time_buffer, &time_buffer_index, &time_buffer_count, &time_average);
             gc_timer_reset();
 
-            if (usb_delay_time >= TIME_MAX_DEFAULT)
-            {
-                usb_delay_time = TIME_MAX_DEFAULT;
-            }
             // Calculate new time delay that we use during polling for
             // perfectly centered polls (Only valid for above 2ms refresh)
-            if (usb_delay_time >= 2500)
+            if ((usb_delay_time >= 4000))
             {
-                usb_rolling_avg_time(usb_delay_time, false, &usb_time_offset);
-                // Otherwise we know we're polling at 1ms and where we need to place the poll
-                ets_delay_us(usb_time_offset);
+                usb_time_offset = time_average;
             }
-            else ets_delay_us(TIME_DEFAULT);
-            
+            // Otherwise we know we're polling at 1ms and where we need to place the poll
+            else
+            {   
+                time_buffer_count = 0;
+                usb_time_offset = 250;
+            }
+
+            ets_delay_us(usb_time_offset);
         }
     }
     else
