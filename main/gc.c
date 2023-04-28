@@ -384,6 +384,7 @@ void adapter_mode_task(void *param)
 {
     bool mode_prev_store    = false;
     bool mode_fwd_store     = false;
+    bool mode_perf_store    = false;
     vTaskDelay(200/portTICK_PERIOD_MS);
 
     for(;;)
@@ -430,6 +431,26 @@ void adapter_mode_task(void *param)
         {
             uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
 
+            // For performance mode change
+            if(mode_perf_store && (util_getbit(regread, NEXT_BUTTON) || util_getbit(regread, PREV_BUTTON)))
+            {
+                tud_disconnect();
+                adapter_settings.performance_mode = !adapter_settings.performance_mode;
+                if (adapter_settings.performance_mode)
+                {
+                    rgb_animate_blink(COLOR_GREEN);
+                }
+                else
+                {
+                    rgb_animate_blink(COLOR_PINK);
+                }
+                vTaskDelay(500/portTICK_PERIOD_MS);
+                rgb_animate_to(COLOR_BLACK);
+                vTaskDelay(500/portTICK_PERIOD_MS);
+                save_adapter_settings();
+                esp_restart();
+            }
+
             // When the button has been released...
             if (mode_fwd_store && util_getbit(regread, NEXT_BUTTON))
             {
@@ -466,6 +487,11 @@ void adapter_mode_task(void *param)
             }
             // Store button state
             mode_prev_store = !util_getbit(regread, PREV_BUTTON);
+
+            if (mode_fwd_store && mode_prev_store)
+            {
+                mode_perf_store = true;
+            }
         }
         vTaskDelay(8/portTICK_PERIOD_MS);
     }

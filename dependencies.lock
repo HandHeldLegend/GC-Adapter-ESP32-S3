@@ -1,16 +1,16 @@
 dependencies:
   espressif/esp_tinyusb:
-    component_hash: 4adc37901b663e39098112e2df11cb6737dcd7c614beffabcb75715cf4ecbc5c
+    component_hash: 5e37c53a10518f40b288a48afec4ab549784be9e6eb74add699a30395543418a
     source:
       service_url: https://api.components.espressif.com/
       type: service
-    version: 1.0.2
+    version: 1.0.3
   espressif/tinyusb:
-    component_hash: 514c97d3c98bbc80ba5d646516fc42705aff8bbcd582908328107d1fa5cf1d5b
+    component_hash: 820a2eef39c7ff0b810e859efd7035a4e5b9b44e77c49020a50ef0668fc941ae
     source:
       service_url: https://api.components.espressif.com/
       type: service
-    version: 0.14.1
+    version: 0.14.2
   idf:
     component_hash: null
     source:

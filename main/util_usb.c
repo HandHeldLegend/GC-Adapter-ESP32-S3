@@ -3,6 +3,10 @@
 usb_mode_t adapter_mode         = USB_MODE_NS;
 uint16_t usb_timeout_time       = 0;
 
+// Used to switch back and forth for 'performance mode'
+// stops issues where 1ms polling is borked on Switch.
+uint8_t usb_polling_rate = 8;
+
 /************* TinyUSB descriptors ****************/
 
 #define TUSB_DESC_TOTAL_LEN      (TUD_CONFIG_DESC_LEN + CFG_TUD_HID * TUD_HID_DESC_LEN)
@@ -229,6 +233,14 @@ static const uint8_t ns_configuration_descriptor[] = {
     TUD_CONFIG_DESCRIPTOR(1, 1, 0, TUSB_DESC_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 500),
 
     // Interface number, string index, boot protocol, report descriptor len, EP In address, size & polling interval
+    TUD_HID_DESCRIPTOR(0, 0, false, sizeof(ns_hid_report_descriptor), 0x81, 64, 8),
+};
+
+static const uint8_t ns_configuration_descriptor_performance[] = {
+    // Configuration number, interface count, string index, total length, attribute, power in mA
+    TUD_CONFIG_DESCRIPTOR(1, 1, 0, TUSB_DESC_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 500),
+
+    // Interface number, string index, boot protocol, report descriptor len, EP In address, size & polling interval
     TUD_HID_DESCRIPTOR(0, 0, false, sizeof(ns_hid_report_descriptor), 0x81, 64, 1),
 };
 
@@ -238,9 +250,15 @@ const tinyusb_config_t ns_cfg = {
     .external_phy = false,
     .configuration_descriptor = ns_configuration_descriptor,
 };
-/**--------------------------**/
-/**--------------------------**/
 
+const tinyusb_config_t ns_cfg_perf = {
+    .device_descriptor = &ns_device_descriptor,
+    .string_descriptor = global_string_descriptor,
+    .external_phy = false,
+    .configuration_descriptor = ns_configuration_descriptor_performance,
+};
+/**--------------------------**/
+/**--------------------------**/
 
 
 /** GAMECUBE HID MODE **/
@@ -337,10 +355,23 @@ static const uint8_t gc_hid_configuration_descriptor[] = {
     // HID Descriptor
     9, HID_DESC_TYPE_HID, U16_TO_U8S_LE(0x0110), 0, 1, HID_DESC_TYPE_REPORT, U16_TO_U8S_LE(sizeof(gc_hid_report_descriptor)),
     // Endpoint Descriptor
+    7, TUSB_DESC_ENDPOINT, 0x81, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(37), 8,
+    // Endpoint Descriptor
+    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(6), 8,
+};
+
+static const uint8_t gc_hid_configuration_descriptor_performance[] = {
+    // Configuration number, interface count, string index, total length, attribute, power in mA
+    TUD_CONFIG_DESCRIPTOR(1, 1, 0, 41, TUSB_DESC_CONFIG_ATT_SELF_POWERED, 500),
+    // Interface
+    9, TUSB_DESC_INTERFACE, 0x00, 0x00, 0x02, TUSB_CLASS_HID, 0x00, 0x00, 0x00,
+    // HID Descriptor
+    9, HID_DESC_TYPE_HID, U16_TO_U8S_LE(0x0110), 0, 1, HID_DESC_TYPE_REPORT, U16_TO_U8S_LE(sizeof(gc_hid_report_descriptor)),
+    // Endpoint Descriptor
     7, TUSB_DESC_ENDPOINT, 0x81, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(37), 1,
     // Endpoint Descriptor
     7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(6), 1,
-};  
+}; 
 
 /**** GameCube Adapter TinyUSB Config ****/
 static const tinyusb_config_t gc_cfg = {
@@ -348,6 +379,13 @@ static const tinyusb_config_t gc_cfg = {
     .string_descriptor          = global_string_descriptor,
     .external_phy               = false,
     .configuration_descriptor   = gc_hid_configuration_descriptor,
+};
+
+static const tinyusb_config_t gc_cfg_perf = {
+    .device_descriptor          = &gc_descriptor_dev,
+    .string_descriptor          = global_string_descriptor,
+    .external_phy               = false,
+    .configuration_descriptor   = gc_hid_configuration_descriptor_performance,
 };
 
 /**--------------------------**/
@@ -698,15 +736,29 @@ void gcusb_start(usb_mode_t mode)
         default:
         case USB_MODE_NS:
             ESP_LOGI(TAG, "NS MODE");
-            ESP_ERROR_CHECK(tinyusb_driver_install(&ns_cfg));
+            if (adapter_settings.performance_mode)
+            {
+                ESP_ERROR_CHECK(tinyusb_driver_install(&ns_cfg_perf));
+            }
+            else
+            {
+                ESP_ERROR_CHECK(tinyusb_driver_install(&ns_cfg));
+            }
             break;
         case USB_MODE_GENERIC:
             ESP_LOGI(TAG, "DINPUT MODE");
             ESP_ERROR_CHECK(tinyusb_driver_install(&di_cfg));
             break;
         case USB_MODE_GC:
-            ESP_LOGI(TAG, "GCC MODE");
-            ESP_ERROR_CHECK(tinyusb_driver_install(&gc_cfg));
+            ESP_LOGI(TAG, "GCC MODE");\
+            if (adapter_settings.performance_mode)
+            {
+                ESP_ERROR_CHECK(tinyusb_driver_install(&gc_cfg_perf));
+            }
+            else
+            {
+                ESP_ERROR_CHECK(tinyusb_driver_install(&gc_cfg));
+            }
             break;
 
         case USB_MODE_XINPUT:

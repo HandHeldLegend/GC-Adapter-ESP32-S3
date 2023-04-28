@@ -38,6 +38,7 @@ typedef enum
 #define USB_TIMEOUT_CAP 200
 extern usb_mode_t adapter_mode;
 extern uint16_t usb_timeout_time;
+extern uint8_t usb_polling_rate;
 
 uint8_t dir_to_hat(hat_mode_t hat_type, uint8_t leftRight, uint8_t upDown);
 

@@ -6,7 +6,7 @@
 // Corresponds to version number in web app.
 #define FIRMWARE_VERSION 0x08AF
 #define SETTINGS_VERSION_OLD 0x08A7
-#define SETTINGS_VERSION 0x08A8
+#define SETTINGS_VERSION 0x08A9
 #define SETTINGS_BYTE_LEN 8
 #define SETTINGS_NAMESPACE "adapt_settings"
 
@@ -50,6 +50,7 @@ typedef struct
     };
 
     uint8_t analog_scaler;
+    bool performance_mode;
 
 } __attribute__ ((packed)) adapter_settings_s;
 

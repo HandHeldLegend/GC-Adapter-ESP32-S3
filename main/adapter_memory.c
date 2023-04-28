@@ -44,10 +44,12 @@ void load_adapter_settings(void)
         if (adapter_settings.settings_version != SETTINGS_VERSION)
         {
             // HANDLE SETTINGS MIGRATION
-            if (adapter_settings.settings_version == SETTINGS_VERSION_OLD)
+            if ((adapter_settings.settings_version == SETTINGS_VERSION_OLD) || 
+                (adapter_settings.settings_version == SETTINGS_VERSION_OLD+1))
             {
                 adapter_settings.settings_version = SETTINGS_VERSION;
                 adapter_settings.analog_scaler = 127;
+                adapter_settings.performance_mode = false;
                 // Set blob
                 nvs_set_blob(adapter_mem_handle, "adp_settings", &adapter_settings, sizeof(adapter_settings_s));
                 nvs_commit(adapter_mem_handle);
@@ -94,6 +96,7 @@ void load_adapter_defaults(void)
         .trigger_threshold_r = 0xFF,
         .zjump = 0x00,
         .analog_scaler = 127,
+        .performance_mode = false,
     };
 
     const char* TAG = "load_adapter_defaults";
