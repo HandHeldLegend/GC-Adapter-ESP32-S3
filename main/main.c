@@ -84,8 +84,7 @@ void app_main(void)
 
     vTaskDelay(250/portTICK_PERIOD_MS);
 
-    gc_timer_init();
     gamecube_rmt_init();
-    
+
     gcusb_start(active_usb_mode);
 }

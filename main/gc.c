@@ -35,7 +35,7 @@ volatile bool       rx_recieved     = false;
 volatile uint32_t   rx_offset       = 0;
 volatile bool       rx_vibrate    = false;
 
-float analog_scaler_f = 1.27;
+float analog_scaler_f = 1.28f;
 
 void gamecube_convert_analog_scaler()
 {
@@ -44,7 +44,7 @@ void gamecube_convert_analog_scaler()
 }
 
 
-static void gamecube_rmt_isr(void* arg) 
+static void gamecube_rmt_isr(void* arg)
 {
     JB_RX_SYNC = JB_TX_STATISR;
     if (JB_TX_STATISR)
@@ -74,7 +74,7 @@ static void gamecube_rmt_isr(void* arg)
 }
 
 esp_err_t gamecube_rmt_init(void)
-{  
+{
     const char* TAG = "gamecube_rmt_init";
 
     cmd_phase = CMD_PHASE_PROBE;
@@ -91,14 +91,14 @@ esp_err_t gamecube_rmt_init(void)
     // RMT Peripheral TX Config
     JB_TX_CARRIER   = 0;
     JB_TX_CARRIER2  = 0;
-    
+
     JB_TX_CLKDIV    = 10; // 0.25 us increments
     JB_TX_MEMSIZE   = 1;
     JB_TX_CONT      = 0;
     JB_TX_IDLELVL   = 1;
     JB_TX_IDLEEN    = 1;
     JB_TX_SYNC      = 1;
-    
+
     // Enable transaction complete interrupts
     JB_TX_ENAISR    = 1;
 
@@ -106,7 +106,7 @@ esp_err_t gamecube_rmt_init(void)
     JB_RX_CLKDIV    = 4;
     JB_RX_MEMSIZE   = 2;
     JB_RX_CARRIER   = 0;
-    
+
     JB_RX_MEMOWNER  = 1;
     JB_RX_IDLETHRESH= JB_IDLE_TICKS;
     JB_RX_FILTEREN  = 1;
@@ -135,6 +135,7 @@ esp_err_t gamecube_rmt_init(void)
     return err;
 }
 
+#define GC_ORIGIN_ADJUST 128
 void gamecube_rmt_process(void)
 {
     // Check which part of the cmd_phase we are in.
@@ -243,12 +244,12 @@ void gamecube_rmt_process(void)
 
                 gc_origin_data.data_set = true;
 
-                // Subtract the data we got with 127. This will tell us how off we are from center.
+                // Subtract the data we got with 128. This will tell us how off we are from center.
                 // A negative value is fine.
-                gc_origin_data.stick_x      = (int) gc_poll_response.stick_x - 127;
-                gc_origin_data.stick_y      = (int) gc_poll_response.stick_y - 127;
-                gc_origin_data.cstick_x     = (int) gc_poll_response.cstick_x - 127;
-                gc_origin_data.cstick_y     = (int) gc_poll_response.cstick_y - 127;
+                gc_origin_data.stick_x      = (int) gc_poll_response.stick_x - GC_ORIGIN_ADJUST;
+                gc_origin_data.stick_y      = (int) gc_poll_response.stick_y - GC_ORIGIN_ADJUST;
+                gc_origin_data.cstick_x     = (int) gc_poll_response.cstick_x - GC_ORIGIN_ADJUST;
+                gc_origin_data.cstick_y     = (int) gc_poll_response.cstick_y - GC_ORIGIN_ADJUST;
                 gc_origin_data.trigger_l    = gc_poll_response.trigger_l;
                 gc_origin_data.trigger_r    = gc_poll_response.trigger_r;
 
@@ -258,7 +259,7 @@ void gamecube_rmt_process(void)
 
                 cmd_phase = CMD_PHASE_POLL;
             }
-            
+
         case CMD_PHASE_POLL:
 
             uint8_t tmp_junk = 0x00;
@@ -269,7 +270,7 @@ void gamecube_rmt_process(void)
 
 
             if (rx_offset == GC_POLL_RESPONSE_LEN)
-            {   
+            {
                 rx_offset = 0;
                 memset(&gc_poll_response, 0, sizeof(gc_poll_response));
 
@@ -391,7 +392,7 @@ void adapter_mode_task(void *param)
     {
         usb_timeout_time += 1;
         if (usb_timeout_time > USB_TIMEOUT_CAP)
-        {   
+        {
             if (tud_disconnect())
             {
                 tud_connect();
@@ -399,12 +400,10 @@ void adapter_mode_task(void *param)
             usb_timeout_time = 0;
             rx_timeout_counts = 0;
             rgb_animate_to(mode_color);
-            gc_timer_stop();
-            gc_timer_reset();
             rmt_reset();
             cmd_phase = CMD_PHASE_PROBE;
             memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
-            
+
             vTaskDelay(300/portTICK_PERIOD_MS);
             while(!tud_mounted())
             {
@@ -426,7 +425,7 @@ void adapter_mode_task(void *param)
             }
             usb_send_data();
         }
-        
+
         if (cmd_phase == CMD_PHASE_PROBE)
         {
             uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
