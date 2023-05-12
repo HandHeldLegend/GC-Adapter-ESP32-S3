@@ -621,6 +621,48 @@ uint8_t dir_to_hat(hat_mode_t hat_type, uint8_t leftRight, uint8_t upDown)
     }
 }
 
+uint8_t accelerate_axis(uint8_t input, uint8_t accelerator)
+{
+    if (accelerator > 99) return input;
+    if (!accelerator) return input;
+
+    float normalizer = 128.0f;
+
+    switch(active_usb_mode)
+    {
+        default:
+            normalizer = 128.0f;
+            break;
+        case USB_MODE_GENERIC:
+        case USB_MODE_GC:
+            normalizer = 100.0f;
+            break;
+    }
+
+    float i = 128;
+    float af = (float) accelerator/100.0f;
+
+    if (input > 129)
+    {
+        // Normalize the input
+        i = ( (float) input - 129)/normalizer;
+        // Multiply by our accelerator
+        i = powf(i, af);
+        // Scale back up
+        i *= normalizer;
+        // Return our new value
+        return 129 + (uint8_t) i;
+    }
+    else if (input < 127)
+    {
+        i = (129 - (float) input)/normalizer;
+        i = powf(i, af);
+        i *= normalizer;
+        return 128 - (uint8_t) i;
+    }
+    else return input;
+}
+
 #define SCALE_AXIS_CENTER 128
 uint8_t scale_axis(int input)
 {
@@ -638,13 +680,13 @@ uint8_t scale_axis(int input)
     if (input > 129)
     {
         float tmp = (float) input - SCALE_AXIS_CENTER;
-        tmp = tmp * analog_scaler_f;
+        tmp = tmp * 1.28f;
         res = (int) tmp + SCALE_AXIS_CENTER;
     }
     else if (input < 127)
     {
         float tmp = SCALE_AXIS_CENTER - (float) input;
-        tmp = tmp * analog_scaler_f;
+        tmp = tmp * 1.28f;
         res = SCALE_AXIS_CENTER - (int) tmp;
     }
     else
@@ -700,7 +742,7 @@ uint8_t scale_trigger(int input)
     }
 }
 
-int gc_origin_adjust(uint8_t value, int origin, bool invert)
+uint8_t gc_origin_adjust(uint8_t value, int origin, bool invert)
 {
     int out = 0;
 
@@ -722,7 +764,7 @@ int gc_origin_adjust(uint8_t value, int origin, bool invert)
         out = 255;
     }
 
-    return out;
+    return (uint8_t) out;
 
 }
 
@@ -903,10 +945,10 @@ void dinput_send_data(void)
         adj_cx  = gc_origin_adjust(gc_poll_response.cstick_x, gc_origin_data.cstick_x,    false);
         adj_cy  = gc_origin_adjust(gc_poll_response.cstick_y, gc_origin_data.cstick_y,    false);
 
-        di_input.stick_left_x   = (uint8_t) adj_x;
-        di_input.stick_left_y   = (uint8_t) adj_y;
-        di_input.stick_right_x  = (uint8_t) adj_cx;
-        di_input.stick_right_y  = (uint8_t) adj_cy;
+        di_input.stick_left_x   = accelerate_axis(adj_x, adapter_settings.analog_accel_lx);
+        di_input.stick_left_y   = accelerate_axis(adj_y, adapter_settings.analog_accel_ly);
+        di_input.stick_right_x  = accelerate_axis(adj_cx, adapter_settings.analog_accel_rx);
+        di_input.stick_right_y  = accelerate_axis(adj_cy, adapter_settings.analog_accel_ry);
     }
 
     tud_hid_report(0, &di_input, DI_HID_LEN);
@@ -976,6 +1018,12 @@ void xinput_send_data(void)
         adj_y   = gc_origin_adjust(gc_poll_response.stick_y,  gc_origin_data.stick_y,     true);
         adj_cx  = gc_origin_adjust(gc_poll_response.cstick_x, gc_origin_data.cstick_x,    false);
         adj_cy  = gc_origin_adjust(gc_poll_response.cstick_y, gc_origin_data.cstick_y,    true);
+
+        // Accelerate axis data
+        adj_x   = accelerate_axis(adj_x, adapter_settings.analog_accel_lx);
+        adj_y   = accelerate_axis(adj_y, adapter_settings.analog_accel_ly);
+        adj_cx  = accelerate_axis(adj_cx, adapter_settings.analog_accel_rx);
+        adj_cy  = accelerate_axis(adj_cy, adapter_settings.analog_accel_ry);
 
         adj_tl  = gc_origin_adjust(gc_poll_response.trigger_l, gc_origin_data.trigger_l,  false);
         adj_tr  = gc_origin_adjust(gc_poll_response.trigger_r, gc_origin_data.trigger_r,  false);
@@ -1116,10 +1164,10 @@ void gc_send_data(void)
         adj_cx  = gc_origin_adjust(gc_poll_response.cstick_x, gc_origin_data.cstick_x,    false);
         adj_cy  = gc_origin_adjust(gc_poll_response.cstick_y, gc_origin_data.cstick_y,    false);
 
-        gc_input.stick_x        = (uint8_t) adj_x;
-        gc_input.stick_y        = (uint8_t) adj_y;
-        gc_input.cstick_x       = (uint8_t) adj_cx;
-        gc_input.cstick_y       = (uint8_t) adj_cy;
+        gc_input.stick_x        = accelerate_axis(adj_x, adapter_settings.analog_accel_lx);
+        gc_input.stick_y        = accelerate_axis(adj_y, adapter_settings.analog_accel_ly);
+        gc_input.cstick_x       = accelerate_axis(adj_cx, adapter_settings.analog_accel_rx);
+        gc_input.cstick_y       = accelerate_axis(adj_cy, adapter_settings.analog_accel_ry);
     }
 
 
@@ -1226,6 +1274,12 @@ void ns_send_data(void)
         adj_y   = gc_origin_adjust(gc_poll_response.stick_y,  gc_origin_data.stick_y,     true);
         adj_cx  = gc_origin_adjust(gc_poll_response.cstick_x, gc_origin_data.cstick_x,    false);
         adj_cy  = gc_origin_adjust(gc_poll_response.cstick_y, gc_origin_data.cstick_y,    true);
+
+        // Accelerate axis data
+        adj_x   = accelerate_axis(adj_x, adapter_settings.analog_accel_lx);
+        adj_y   = accelerate_axis(adj_y, adapter_settings.analog_accel_ly);
+        adj_cx  = accelerate_axis(adj_cx, adapter_settings.analog_accel_rx);
+        adj_cy  = accelerate_axis(adj_cy, adapter_settings.analog_accel_ry);
 
         ns_input.stick_left_x   = scale_axis(adj_x);
         ns_input.stick_left_y   = scale_axis(adj_y);

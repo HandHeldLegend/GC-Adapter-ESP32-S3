@@ -19,7 +19,7 @@ void load_adapter_settings(void)
 
     // Open storage
     err = nvs_open(SETTINGS_NAMESPACE, NVS_READWRITE, &adapter_mem_handle);
-    if (err != ESP_OK) 
+    if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "During Adapter load settings, NVS Open failed.");
         load_adapter_defaults();
@@ -36,32 +36,18 @@ void load_adapter_settings(void)
     {
        err = nvs_get_blob(adapter_mem_handle, "adp_settings", &adapter_settings, &required_size);
         if (err != ESP_OK)
-        {   
+        {
             ESP_LOGE(TAG, "Could not load settings. 0x%08X", (unsigned int) adapter_settings.settings_version);
             load_adapter_defaults();
             return;
         }
         if (adapter_settings.settings_version != SETTINGS_VERSION)
         {
-            // HANDLE SETTINGS MIGRATION
-            if ((adapter_settings.settings_version == SETTINGS_VERSION_OLD) || 
-                (adapter_settings.settings_version == SETTINGS_VERSION_OLD+1))
-            {
-                adapter_settings.settings_version = SETTINGS_VERSION;
-                adapter_settings.analog_scaler = 127;
-                adapter_settings.performance_mode = false;
-                // Set blob
-                nvs_set_blob(adapter_mem_handle, "adp_settings", &adapter_settings, sizeof(adapter_settings_s));
-                nvs_commit(adapter_mem_handle);
-                nvs_close(adapter_mem_handle);
-            }
-            else
-            {
-                ESP_LOGI(TAG, "Settings firmware version out of date. Setting to default...");
-                nvs_close(adapter_mem_handle);
-                load_adapter_defaults();
-            }
-            
+
+            ESP_LOGI(TAG, "Settings firmware version out of date. Setting to default...");
+            nvs_close(adapter_mem_handle);
+            load_adapter_defaults();
+
             return;
         }
         else
@@ -69,7 +55,7 @@ void load_adapter_settings(void)
             ESP_LOGI(TAG, "Settings loaded with settings version byte 0x%08X", (unsigned int) adapter_settings.settings_version);
             nvs_close(adapter_mem_handle);
         }
-        
+
     }
     else
     {
@@ -95,7 +81,10 @@ void load_adapter_defaults(void)
         .trigger_threshold_l = 0xFF,
         .trigger_threshold_r = 0xFF,
         .zjump = 0x00,
-        .analog_scaler = 127,
+        .analog_accel_lx = 100,
+        .analog_accel_ly = 100,
+        .analog_accel_rx = 100,
+        .analog_accel_ry = 100,
         .performance_mode = false,
     };
 
@@ -105,7 +94,7 @@ void load_adapter_defaults(void)
 
     // Open
     err = nvs_open(SETTINGS_NAMESPACE, NVS_READWRITE, &adapter_mem_handle);
-    if (err != ESP_OK) 
+    if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "Error when opening NVS storage for HOJA Settings.");
         return;
@@ -127,7 +116,7 @@ void save_adapter_settings(void)
     esp_err_t err;
     // Open
     err = nvs_open(SETTINGS_NAMESPACE, NVS_READWRITE, &adapter_mem_handle);
-    if (err != ESP_OK) 
+    if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "During Adapter settings save, NVS storage failed to open.");
         return;

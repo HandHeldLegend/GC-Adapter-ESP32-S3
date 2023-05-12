@@ -9,7 +9,7 @@
 #define LED_BUTTON_PIN (GPIO_NUM_9)
 #define LED_USB_PIN (GPIO_NUM_10)
 
-#define LED_PIN_MASK ( (1ULL << LED_BUTTON_PIN) | (1ULL << LED_USB_PIN) ) 
+#define LED_PIN_MASK ( (1ULL << LED_BUTTON_PIN) | (1ULL << LED_USB_PIN) )
 
 #define PIN_MASK_GCP ( (1ULL << NEXT_BUTTON) | (1ULL << PREV_BUTTON))
 
@@ -23,6 +23,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 // ESP includes
 #include "esp_system.h"

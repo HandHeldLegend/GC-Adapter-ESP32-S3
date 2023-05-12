@@ -41,7 +41,10 @@ void command_queue_process()
             break;
 
         case CMD_SETTINGS_ANALOGSENSITIVITY:
-            cmd_buffer[1] = adapter_settings.analog_scaler;
+            cmd_buffer[1] = adapter_settings.analog_accel_lx;
+            cmd_buffer[2] = adapter_settings.analog_accel_ly;
+            cmd_buffer[3] = adapter_settings.analog_accel_rx;
+            cmd_buffer[4] = adapter_settings.analog_accel_ry;
             break;
     }
 
@@ -77,7 +80,7 @@ void command_handler(const uint8_t *data, uint16_t bufsize)
 
         // Load all settings to web interface
         case CMD_SETTINGS_GETALL:
-            
+
             // Set up our command queue to
             // send out the appropriate commands.
             cmd_queue[0] = CMD_SETTINGS_LEDBRIGHTNESS;
@@ -191,8 +194,23 @@ void command_handler(const uint8_t *data, uint16_t bufsize)
             break;
 
         case CMD_SETTINGS_ANALOGSENSITIVITY:
-            adapter_settings.analog_scaler = data[2];
-            gamecube_convert_analog_scaler();
+            switch(data[2])
+            {
+                default:
+                case 0:
+                    adapter_settings.analog_accel_lx = data[3];
+                    break;
+                case 1:
+                    adapter_settings.analog_accel_ly = data[3];
+                    break;
+                case 2:
+                    adapter_settings.analog_accel_rx = data[3];
+                    break;
+                case 3:
+                    adapter_settings.analog_accel_ry = data[3];
+                    break;
+            }
+
             break;
     }
 }

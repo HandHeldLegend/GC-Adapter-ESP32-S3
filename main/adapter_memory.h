@@ -4,9 +4,8 @@
 #include "adapter_includes.h"
 
 // Corresponds to version number in web app.
-#define FIRMWARE_VERSION 0x08AF
-#define SETTINGS_VERSION_OLD 0x08A7
-#define SETTINGS_VERSION 0x08A9
+#define FIRMWARE_VERSION 0x0900
+#define SETTINGS_VERSION 0x08AA
 #define SETTINGS_BYTE_LEN 8
 #define SETTINGS_NAMESPACE "adapt_settings"
 
@@ -49,9 +48,12 @@ typedef struct
         uint8_t zjump;
     };
 
-    uint8_t analog_scaler;
     bool performance_mode;
 
+    uint8_t analog_accel_lx;
+    uint8_t analog_accel_ly;
+    uint8_t analog_accel_rx;
+    uint8_t analog_accel_ry;
 } __attribute__ ((packed)) adapter_settings_s;
 
 extern adapter_settings_s adapter_settings;
