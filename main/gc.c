@@ -386,10 +386,11 @@ void adapter_mode_task(void *param)
         usb_timeout_time += 1;
         if (usb_timeout_time > USB_TIMEOUT_CAP)
         {
+            /*
             if (tud_disconnect())
             {
                 tud_connect();
-            }
+            }*/
             usb_timeout_time = 0;
             rx_timeout_counts = 0;
             rgb_animate_to(mode_color);
@@ -398,24 +399,6 @@ void adapter_mode_task(void *param)
             memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
 
             vTaskDelay(300/portTICK_PERIOD_MS);
-            while(!tud_mounted())
-            {
-                vTaskDelay(8/portTICK_PERIOD_MS);
-            }
-            if (active_usb_mode != USB_MODE_XINPUT)
-            {
-                while (!tud_hid_ready())
-                {
-                    vTaskDelay(8/portTICK_PERIOD_MS);
-                }
-            }
-            else
-            {
-                while(!tud_xinput_ready())
-                    {
-                        vTaskDelay(8/portTICK_PERIOD_MS);
-                    }
-            }
             usb_send_data();
         }
 

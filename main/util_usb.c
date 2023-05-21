@@ -623,8 +623,7 @@ uint8_t dir_to_hat(hat_mode_t hat_type, uint8_t leftRight, uint8_t upDown)
 
 uint8_t accelerate_axis(uint8_t input, uint8_t accelerator)
 {
-    if (accelerator > 99) return input;
-    if (!accelerator) return input;
+    if (accelerator == 100) return input;
 
     float normalizer = 128.0f;
 
