@@ -44,6 +44,8 @@ uint8_t dir_to_hat(hat_mode_t hat_type, uint8_t leftRight, uint8_t upDown);
 
 void gcusb_start(usb_mode_t mode);
 
+void gc_reset_data(void);
+
 void usb_send_data(void);
 
 void rmt_reset(void);

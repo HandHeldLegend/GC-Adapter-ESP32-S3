@@ -792,7 +792,7 @@ void gcusb_start(usb_mode_t mode)
             ESP_ERROR_CHECK(tinyusb_driver_install(&di_cfg));
             break;
         case USB_MODE_GC:
-            ESP_LOGI(TAG, "GCC MODE");\
+            ESP_LOGI(TAG, "GCC MODE");
             if (adapter_settings.performance_mode)
             {
                 ESP_ERROR_CHECK(tinyusb_driver_install(&gc_cfg_perf));
@@ -1063,6 +1063,13 @@ void xinput_send_data(void)
 
 #define GC_AXIS_CENTER 128
 bool gc_first = false;
+
+void gc_reset_data(void)
+{
+    memset(gc_buffer, 0, GC_HID_LEN);
+    gc_first = false;
+}
+
 void gc_send_data(void)
 {
     gc_buffer[0] = 0x21;
@@ -1193,7 +1200,6 @@ void gc_send_data(void)
     }
 
     tud_hid_report(0, &gc_buffer, GC_HID_LEN);
-
 }
 
 #define NS_AXIS_CENTER 128

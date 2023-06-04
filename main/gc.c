@@ -394,6 +394,7 @@ void adapter_mode_task(void *param)
             usb_timeout_time = 0;
             rx_timeout_counts = 0;
             rgb_animate_to(mode_color);
+            gc_reset_data();
             rmt_reset();
             cmd_phase = CMD_PHASE_PROBE;
             memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
