@@ -44,8 +44,6 @@ void app_main(void)
 
     load_adapter_settings();
 
-    gamecube_convert_analog_scaler();
-
     uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
     if (!util_getbit(regread, PREV_BUTTON))
     {
@@ -84,8 +82,7 @@ void app_main(void)
 
     vTaskDelay(250/portTICK_PERIOD_MS);
 
-    gc_timer_init();
     gamecube_rmt_init();
-    
+
     gcusb_start(active_usb_mode);
 }
