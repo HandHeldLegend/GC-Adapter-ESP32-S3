@@ -5,8 +5,6 @@
  */
 
 #include "adapter_includes.h"
-#include "descriptors.h"
-static const char *TAG = "Mitch GC Pro Adapter";
 
 rgb_s colors[CONFIG_NP_RGB_COUNT];
 
@@ -47,7 +45,7 @@ void app_main(void)
     uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
     if (!util_getbit(regread, PREV_BUTTON))
     {
-        active_usb_mode = USB_MODE_GENERIC;
+        active_usb_mode = 0x00;
     }
     else
     {
@@ -70,9 +68,6 @@ void app_main(void)
         break;
         case USB_MODE_GC:
             mode_color.rgb = COLOR_PURPLE.rgb;
-        break;
-        case USB_MODE_GENERIC:
-            mode_color.rgb = COLOR_BLUE.rgb;
         break;
         case USB_MODE_XINPUT:
             mode_color.rgb = 0x107C10;

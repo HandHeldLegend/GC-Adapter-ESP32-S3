@@ -5,19 +5,6 @@
 
 typedef enum
 {
-  NS_HAT_TOP          = 0x00,
-  NS_HAT_TOP_RIGHT    = 0x01,
-  NS_HAT_RIGHT        = 0x02,
-  NS_HAT_BOTTOM_RIGHT = 0x03,
-  NS_HAT_BOTTOM       = 0x04,
-  NS_HAT_BOTTOM_LEFT  = 0x05,
-  NS_HAT_LEFT         = 0x06,
-  NS_HAT_TOP_LEFT     = 0x07,
-  NS_HAT_CENTER       = 0x08,
-} ns_input_hat_dir_t;
-
-typedef enum
-{
   XI_HAT_TOP          = 0x01,
   XI_HAT_TOP_RIGHT    = 0x02,
   XI_HAT_RIGHT        = 0x03,
@@ -29,18 +16,17 @@ typedef enum
   XI_HAT_CENTER       = 0x00,
 } xi_input_hat_dir_t;
 
-typedef enum
-{
-    HAT_MODE_NS,
-    HAT_MODE_XI,
-} hat_mode_t;
-
 #define USB_TIMEOUT_CAP 200
 extern usb_mode_t adapter_mode;
 extern uint16_t usb_timeout_time;
 extern uint8_t usb_polling_rate;
+extern const char* global_string_descriptor[];
 
-uint8_t dir_to_hat(hat_mode_t hat_type, uint8_t leftRight, uint8_t upDown);
+uint8_t dir_to_hat(uint8_t leftRight, uint8_t upDown);
+uint8_t scale_axis(int input);
+short sign_axis(int input);
+uint8_t scale_trigger(int input);
+uint8_t gc_origin_adjust(uint8_t value, int origin, bool invert);
 
 void gcusb_start(usb_mode_t mode);
 

@@ -1,10 +1,25 @@
 #ifndef ADAPTER_INCLUDES_H
 #define ADAPTER_INCLUDES_H
 
+#define CFG_TUD_VENDOR 2
+
 #define ADAPTER_DEBUG_ENABLE 0
 #define NEXT_BUTTON (GPIO_NUM_0) // Use BOOT signal by default
 #define PREV_BUTTON (GPIO_NUM_4)
 
+#define ADAPTER_WEBUSB_URL      "handheldlegend.com"
+#define ADAPTER_MANUFACTURER    "HHL"
+#define ADATPER_PRODUCTNAME     "GC Pocket"
+
+// Some definitions for USB Timing
+#define TIMEOUT_GC_US 500
+#define TIMEOUT_COUNTS 10
+
+#define NON_P_MODE_DELAY 550
+
+#define GC_AXIS_CENTER 128
+#define SCALE_AXIS_CENTER 128
+#define SIGNED_SCALER (float)
 
 #define LED_BUTTON_PIN (GPIO_NUM_9)
 #define LED_USB_PIN (GPIO_NUM_10)
@@ -39,9 +54,12 @@
 #include "esp_rom_sys.h"
 #include "driver/gptimer.h"
 #include "rom/ets_sys.h"
+#include "esp_random.h"
 
 // USB
+#include "desc_bos.h"
 #include "tinyusb.h"
+#include "tusb.h"
 #include "class/hid/hid_device.h"
 #include "class/vendor/vendor_device.h"
 #include "tusb_tasks.h"
@@ -59,12 +77,20 @@
 #include "adapter_types.h"
 #include "gc.h"
 #include "rmt_gc.h"
-#include "descriptors.h"
 #include "util_usb.h"
 #include "gc_timer.h"
 #include "adapter_memory.h"
-#include "command_handler.h"
 #include "util_common.h"
+
+// Device types
+#include "gamecube.h"
+#include "swpro.h"
+#include "xinput.h"
+
+// Switch stuff
+#include "switch_analog.h"
+#include "switch_commands.h"
+#include "switch_spi.h"
 
 // Drivers
 #include "driver/gpio.h"

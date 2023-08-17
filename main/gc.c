@@ -22,7 +22,7 @@ rmt_item32_t gcmd_poll_rmt[GCMD_POLL_LEN] = {
 
 gc_cmd_phase_t         cmd_phase           = CMD_PHASE_PROBE;
 gc_usb_phase_t         usb_phase           = GC_USB_IDLE;
-usb_mode_t             active_usb_mode    = USB_MODE_GENERIC;
+usb_mode_t             active_usb_mode    = USB_MODE_NS;
 gc_type_t              active_gc_type     = GC_TYPE_UNKNOWN;
 
 gc_probe_response_s    gc_probe_response   = {0};
@@ -36,6 +36,11 @@ volatile uint32_t   rx_offset       = 0;
 volatile bool       rx_vibrate    = false;
 
 float analog_scaler_f = 1.28f;
+
+void gamecube_rumble_en(bool enable)
+{
+    rx_vibrate = enable;
+}
 
 static void gamecube_rmt_isr(void* arg)
 {
@@ -394,7 +399,7 @@ void adapter_mode_task(void *param)
             usb_timeout_time = 0;
             rx_timeout_counts = 0;
             rgb_animate_to(mode_color);
-            gc_reset_data();
+            gamecube_reset_data();
             rmt_reset();
             cmd_phase = CMD_PHASE_PROBE;
             memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);

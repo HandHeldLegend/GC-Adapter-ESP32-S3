@@ -74,18 +74,14 @@ void load_adapter_settings(void)
 void load_adapter_defaults(void)
 {
     const adapter_settings_s default_s = {
-        .adapter_mode = USB_MODE_GENERIC,
+        .adapter_mode = 0x00,
         .led_brightness = 50,
         .settings_version = SETTINGS_VERSION,
-        .trigger_mode = 0x0000,
+        .trigger_mode = 0x00,
         .trigger_threshold_l = 0xFF,
         .trigger_threshold_r = 0xFF,
         .zjump = 0x00,
-        .analog_accel_lx = 100,
-        .analog_accel_ly = 100,
-        .analog_accel_rx = 100,
-        .analog_accel_ry = 100,
-        .performance_mode = false,
+        .performance_mode = 0x00,
     };
 
     const char* TAG = "load_adapter_defaults";

@@ -3,6 +3,8 @@
 
 #include "adapter_includes.h"
 
+extern const uint8_t xid_configuration_descriptor[48];
+
 void xinputd_init(void);
 
 void xinputd_reset(uint8_t rhport);

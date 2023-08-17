@@ -5,4 +5,14 @@
 cmake_minimum_required(VERSION 3.16)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+
+add_compile_definitions(
+    CFG_TUD_VENDOR=2
+    CFG_TUD_HID=2
+    CFG_TUD_HID_EP_BUFSIZE=64
+    CFG_TUD_VENDOR_EPSIZE=64
+    CFG_TUD_VENDOR_RX_BUFSIZE=64
+    CFG_TUD_VENDOR_TX_BUFSIZE=64
+)
+
 project(gc-pocket-adapter)
