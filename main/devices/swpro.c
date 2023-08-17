@@ -136,28 +136,70 @@ const uint8_t swpro_configuration_descriptor[] = {
     TUD_CONFIG_DESCRIPTOR(1, 2, 0, 64, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 500),
 
     // Interface
-    9, TUSB_DESC_INTERFACE, 0x00, 0x00, 0x02, TUSB_CLASS_HID, 0x00, 0x00, 0x00,
+    9,
+    TUSB_DESC_INTERFACE,
+    0x00,
+    0x00,
+    0x02,
+    TUSB_CLASS_HID,
+    0x00,
+    0x00,
+    0x00,
     // HID Descriptor
-    9, HID_DESC_TYPE_HID, U16_TO_U8S_LE(0x0111), 0, 1, HID_DESC_TYPE_REPORT, U16_TO_U8S_LE(sizeof(swpro_hid_report_descriptor)),
+    9,
+    HID_DESC_TYPE_HID,
+    U16_TO_U8S_LE(0x0111),
+    0,
+    1,
+    HID_DESC_TYPE_REPORT,
+    U16_TO_U8S_LE(sizeof(swpro_hid_report_descriptor)),
     // Endpoint Descriptor
-    7, TUSB_DESC_ENDPOINT, 0x81, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(64), 8,
+    7,
+    TUSB_DESC_ENDPOINT,
+    0x81,
+    TUSB_XFER_INTERRUPT,
+    U16_TO_U8S_LE(64),
+    8,
     // Endpoint Descriptor
-    7, TUSB_DESC_ENDPOINT, 0x01, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(64), 8,
+    7,
+    TUSB_DESC_ENDPOINT,
+    0x01,
+    TUSB_XFER_INTERRUPT,
+    U16_TO_U8S_LE(64),
+    8,
 
     // Alternate Interface for WebUSB
     // Interface
-    9, TUSB_DESC_INTERFACE, 0x01, 0x00, 0x02, TUSB_CLASS_VENDOR_SPECIFIC, 0x00, 0x00, 0x00,
+    9,
+    TUSB_DESC_INTERFACE,
+    0x01,
+    0x00,
+    0x02,
+    TUSB_CLASS_VENDOR_SPECIFIC,
+    0x00,
+    0x00,
+    0x00,
     // Endpoint Descriptor
-    7, TUSB_DESC_ENDPOINT, 0x82, TUSB_XFER_BULK, U16_TO_U8S_LE(64), 0,
+    7,
+    TUSB_DESC_ENDPOINT,
+    0x82,
+    TUSB_XFER_BULK,
+    U16_TO_U8S_LE(64),
+    0,
     // Endpoint Descriptor
-    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_BULK, U16_TO_U8S_LE(64), 0,
+    7,
+    TUSB_DESC_ENDPOINT,
+    0x02,
+    TUSB_XFER_BULK,
+    U16_TO_U8S_LE(64),
+    0,
 };
 
 const tinyusb_config_t swpro_cfg = {
-    .device_descriptor          = &swpro_device_descriptor,
-    .string_descriptor          = global_string_descriptor,
-    .external_phy               = false,
-    .configuration_descriptor   = swpro_configuration_descriptor,
+    .device_descriptor = &swpro_device_descriptor,
+    .string_descriptor = global_string_descriptor,
+    .external_phy = false,
+    .configuration_descriptor = swpro_configuration_descriptor,
 };
 
 /**--------------------------**/
@@ -170,36 +212,45 @@ uint32_t _timeout = 0;
 
 void swpro_hid_report(gc_poll_response_s *poll_response, gc_origin_data_s *origin_data)
 {
-  static sw_input_s data = {0};
+    static sw_input_s data = {0};
 
-  data.d_down   = poll_response->dpad_down;
-  data.d_right  = poll_response->dpad_right;
-  data.d_left   = poll_response->dpad_left;
-  data.d_up     = poll_response->dpad_up;
+    data.d_down = poll_response->dpad_down;
+    data.d_right = poll_response->dpad_right;
+    data.d_left = poll_response->dpad_left;
+    data.d_up = poll_response->dpad_up;
 
-  data.b_y = poll_response->button_y;
-  data.b_x = poll_response->button_x;
-  data.b_a = poll_response->button_a;
-  data.b_b = poll_response->button_b;
+    data.b_y = poll_response->button_y;
+    data.b_x = poll_response->button_x;
+    data.b_a = poll_response->button_a;
+    data.b_b = poll_response->button_b;
 
-  //data.b_minus  = poll_response->button_minus;
-  data.b_plus   = poll_response->button_start;
-  //data.b_home   = poll_response->button_home;
-  //data.b_capture = poll_response->button_capture;
+    // data.b_minus  = poll_response->button_minus;
+    data.b_plus = poll_response->button_start;
+    // data.b_home   = poll_response->button_home;
+    // data.b_capture = poll_response->button_capture;
 
-  //data.sb_right = poll_response->button_stick_right;
-  //data.sb_left  = poll_response->button_stick_left;
+    // data.sb_right = poll_response->button_stick_right;
+    // data.sb_left  = poll_response->button_stick_left;
 
-  data.t_r  = poll_response->trigger_r;
-  data.t_l  = poll_response->trigger_l;
+    data.t_r = poll_response->button_z;
+    // data.t_l  = poll_response->trigger_l;
 
-  //data.t_zl = poll_response->trigger_zl;
-  //data.t_zr = poll_response->trigger_zr;
+    int adj_x = gc_origin_adjust(poll_response->stick_x, origin_data->stick_x, false);
+    int adj_y = gc_origin_adjust(poll_response->stick_y, origin_data->stick_y, false);
+    int adj_cx = gc_origin_adjust(poll_response->cstick_x, origin_data->cstick_x, false);
+    int adj_cy = gc_origin_adjust(poll_response->cstick_y, origin_data->cstick_y, false);
 
-  //data.ls_x = analog_data->lx;
-  //data.ls_y = analog_data->ly;
-  //data.rs_x = analog_data->rx;
-  //data.rs_y = analog_data->ry;
+    adj_x = scale_axis(adj_x);
+    adj_y = scale_axis(adj_y);
+    adj_cx = scale_axis(adj_cx);
+    adj_cy = scale_axis(adj_cy);
+    data.t_zl = poll_response->trigger_l > 75 ? 1 : 0;
+    data.t_zr = poll_response->trigger_r > 75 ? 1 : 0;
 
-  switch_commands_process(&data);
+    data.ls_x = adj_x << 4;
+    data.ls_y = adj_y << 4;
+    data.rs_x = adj_cx << 4;
+    data.rs_y = adj_cy << 4;
+
+    switch_commands_process(&data);
 }

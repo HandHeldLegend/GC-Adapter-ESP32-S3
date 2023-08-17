@@ -32,7 +32,7 @@ extern volatile uint32_t    rx_timeout;
 extern volatile uint32_t   rx_timeout_counts;
 extern volatile bool        rx_recieved;
 extern volatile uint32_t    rx_offset;
-extern volatile bool rx_vibrate;
+extern volatile bool        rx_vibrate;
 
 extern float analog_scaler_f;
 

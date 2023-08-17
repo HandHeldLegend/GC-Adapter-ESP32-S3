@@ -71,6 +71,18 @@ void load_adapter_settings(void)
     return;
 }
 
+// Internal functions for command processing
+void _generate_mac(uint8_t *out)
+{
+  printf("Generated MAC: ");
+  for(uint8_t i = 0; i < 6; i++)
+  {
+    out[i] = esp_random() & 0xFF;
+    printf("%X : ", out[i]);
+  }
+  printf("\n");
+}
+
 void load_adapter_defaults(void)
 {
     const adapter_settings_s default_s = {
@@ -78,11 +90,13 @@ void load_adapter_defaults(void)
         .led_brightness = 50,
         .settings_version = SETTINGS_VERSION,
         .trigger_mode = 0x00,
-        .trigger_threshold_l = 0xFF,
-        .trigger_threshold_r = 0xFF,
+        .trigger_threshold_l = 75,
+        .trigger_threshold_r = 75,
         .zjump = 0x00,
         .performance_mode = 0x00,
     };
+
+    _generate_mac(default_s.switch_mac_address);
 
     const char* TAG = "load_adapter_defaults";
     esp_err_t err;

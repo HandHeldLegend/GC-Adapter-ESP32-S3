@@ -16,7 +16,7 @@ typedef enum
   XI_HAT_CENTER       = 0x00,
 } xi_input_hat_dir_t;
 
-#define USB_TIMEOUT_CAP 200
+#define USB_TIMEOUT_CAP 500
 extern usb_mode_t adapter_mode;
 extern uint16_t usb_timeout_time;
 extern uint8_t usb_polling_rate;
@@ -36,6 +36,6 @@ void usb_send_data(void);
 
 void rmt_reset(void);
 
-void usb_process_data(void);
+void usb_process_task();
 
 #endif

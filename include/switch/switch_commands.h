@@ -26,12 +26,17 @@
 #define SW_CMD_GET_PLAYER       0x31
 #define SW_CMD_33               0x33
 
-#define SW_REPORT_SIZE 64
+//#define SW_REPORT_SIZE 64
 
+uint8_t switch_get_reporting_mode();
 // Commands for setting report data
 void rumble_translate(const uint8_t *data);
+
+void info_handler(uint8_t info_code);
+void report_handler(uint8_t report_id, const uint8_t *data, uint16_t len);
+
 void switch_commands_process(sw_input_s *input_data);
-void switch_commands_future_handle(uint8_t command_id, const uint8_t *data, uint16_t len);
+void switch_commands_future_handle(uint8_t report_id, const uint8_t *data, uint16_t len);
 void switch_commands_bulkset(uint8_t start_idx, uint8_t* data, uint8_t len);
 
 #endif

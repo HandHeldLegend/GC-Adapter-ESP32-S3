@@ -5,7 +5,7 @@
 
 // Corresponds to version number in web app.
 #define FIRMWARE_VERSION 0x0901
-#define SETTINGS_VERSION 0x08AB
+#define SETTINGS_VERSION 0x00F1
 #define SETTINGS_BYTE_LEN 8
 #define SETTINGS_NAMESPACE "adapt_settings"
 

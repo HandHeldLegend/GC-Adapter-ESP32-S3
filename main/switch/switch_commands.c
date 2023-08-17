@@ -1,27 +1,36 @@
 #include "switch_commands.h"
 
+#define SW_REPORT_SIZE 63
+
 // This C file handles various Switch gamepad commands (OUT reports)
 uint8_t _switch_in_command_buffer[64] = {0};
 uint8_t _switch_in_report_id = 0x00;
 uint16_t _switch_in_command_len = 64;
 bool _switch_in_command_got = false;
 
-uint8_t _switch_reporting_mode = 0x3F;
+uint8_t _switch_in_setup_buffer[64] = {0};
+bool _switch_in_setup_got = false;
 
+uint8_t _switch_reporting_mode = 0x3F;
 uint8_t _switch_command_buffer[64] = {0};
 uint8_t _switch_command_report_id = 0x00;
 //uint8_t _switch_mac_address[6] = {0};
 uint8_t _switch_ltk[16] = {0};
 
+uint8_t switch_get_reporting_mode()
+{
+  return _switch_reporting_mode;
+}
+
 void generate_ltk()
 {
-  printf("Generated LTK: ");
+  //printf("Generated LTK: ");
   for(uint8_t i = 0; i < 16; i++)
   {
     _switch_ltk[i] = esp_random() & 0xFF;
-    printf("%X : ", _switch_ltk[i]);
+    //printf("%X : ", _switch_ltk[i]);
   }
-  printf("\n");
+  //printf("\n");
 }
 
 void clear_report()
@@ -48,7 +57,7 @@ void set_timer()
 {
   static int16_t _switch_timer = 0;
   _switch_command_buffer[0] = (uint8_t) _switch_timer;
-  //printf("Td=%d \n", _switch_timer);
+  ////printf("Td=%d \n", _switch_timer);
   _switch_timer+=3;
   if (_switch_timer > 0xFF)
   {
@@ -121,18 +130,20 @@ void rumble_translate(const uint8_t *data)
     uint8_t hba = (data[1] & 0xFE)/2;
 
     float ha = (float) hba*amp_range_inc;
-    gamecube_rumble_en((ha>10.0f)?true:false);
+    rx_vibrate = (ha>10.0f)?true:false;
 
-    //printf("Amplitude: %.2f\n", ha);
+    ////printf("Amplitude: %.2f\n", ha);
 }
+
+static uint8_t _info_out[64] = {0};
 
 // Sends mac address with 0x81 command (unknown?)
 void info_set_mac()
 {
-  _switch_command_buffer[0] = 0x01;
-  _switch_command_buffer[1] = 0x00;
-  _switch_command_buffer[2] = 0x03;
-  memcpy(&_switch_command_buffer[3], &adapter_settings.switch_mac_address, 6*sizeof(uint8_t));
+  _info_out[0] = 0x01;
+  _info_out[1] = 0x00;
+  _info_out[2] = 0x03;
+  memcpy(&_info_out[3], &adapter_settings.switch_mac_address, 6*sizeof(uint8_t));
 }
 
 // A second part to the initialization,
@@ -140,32 +151,32 @@ void info_set_mac()
 // to get continued comms over USB.
 void info_set_init()
 {
-  _switch_command_buffer[0] = 0x02;
+  _info_out[0] = 0x02;
 }
+
 
 void info_handler(uint8_t info_code)
 {
-  clear_report();
-  set_report_id(0x81);
-
+  memset(_info_out, 0, 64);
   switch(info_code)
   {
     case 0x01:
-      printf("MAC Address requested.");
+      //printf("MAC Address requested.");
       info_set_mac();
       break;
 
     default:
-      printf("Unknown setup requested: %X", info_code);
-      _switch_command_buffer[0] = info_code;
+      //printf("Unknown setup requested: %X", info_code);
+      _info_out[0] = info_code;
       break;
   }
-
-  tud_hid_report(_switch_command_report_id, _switch_command_buffer, 64);
+ 
+  tud_hid_report(0x81, _info_out, SW_REPORT_SIZE);
 }
 
 void pairing_set(uint8_t phase)
 {
+  uint8_t tmp[64] = {0};
   // Respond with MAC address and "Pro Controller".
   const uint8_t pro_controller_string[24] = {0x00, 0x25, 0x08, 0x50, 0x72, 0x6F, 0x20, 0x43, 0x6F,
                                       0x6E, 0x74, 0x72, 0x6F, 0x6C, 0x6C, 0x65, 0x72, 0x00,
@@ -208,51 +219,51 @@ void command_handler(uint8_t command, const uint8_t *data, uint16_t len)
 
   // Set subcmd
   set_command(command);
-  printf("CMD: ");
+  //printf("CMD: ");
 
   switch(command)
   {
     case SW_CMD_SET_NFC:
-      printf("Set NFC MCU:\n");
+      //printf("Set NFC MCU:\n");
       set_ack(0x80);
       break;
 
     case SW_CMD_ENABLE_IMU:
-      printf("Enable IMU: %d\n", data[11]);
+      //printf("Enable IMU: %d\n", data[11]);
       //imu_set_enabled(data[11]>0);
       set_ack(0x80);
       break;
 
     case SW_CMD_SET_PAIRING:
-      printf("Set pairing.\n");
+      //printf("Set pairing.\n");
       pairing_set(data[11]);
       break;
 
     case SW_CMD_SET_INPUTMODE:
-      printf("Input mode change: %X\n", data[11]);
+      //printf("Input mode change: %X\n", data[11]);
       set_ack(0x80);
       _switch_reporting_mode = data[11];
       break;
 
     case SW_CMD_GET_DEVICEINFO:
-      printf("Get device info.\n");
+      //printf("Get device info.\n");
       set_ack(0x82);
       set_devinfo();
       break;
 
     case SW_CMD_SET_SHIPMODE:
-      printf("Set ship mode: %X\n", data[11]);
+      //printf("Set ship mode: %X\n", data[11]);
       set_ack(0x80);
       break;
 
     case SW_CMD_GET_SPI:
-      printf("Read SPI. Address: %X, %X | Len: %d\n", data[12], data[11], data[15]);
+      //printf("Read SPI. Address: %X, %X | Len: %d\n", data[12], data[11], data[15]);
       set_ack(0x90);
       sw_spi_readfromaddress(data[12], data[11], data[15]);
       break;
 
     case SW_CMD_SET_SPI:
-      printf("Write SPI. Address: %X, %X | Len: %d\n", data[12], data[11], data[15]);
+      //printf("Write SPI. Address: %X, %X | Len: %d\n", data[12], data[11], data[15]);
       set_ack(0x80);
 
       // Write IMU calibration data
@@ -261,8 +272,8 @@ void command_handler(uint8_t command, const uint8_t *data, uint16_t len)
         for(uint16_t i = 0; i < 26; i++)
         {
           // global_loaded_settings.imu_calibration[i] = data[16+i];
-          printf("0x%x, ", data[16+i]);
-          printf("\n");
+          //printf("0x%x, ", data[16+i]);
+          //printf("\n");
         }
         //settings_save(false);
       }
@@ -270,18 +281,18 @@ void command_handler(uint8_t command, const uint8_t *data, uint16_t len)
       break;
 
     case SW_CMD_GET_TRIGGERET:
-      printf("Get trigger ET.\n");
+      //printf("Get trigger ET.\n");
       set_ack(0x83);
       set_sub_triggertime(100);
       break;
 
     case SW_CMD_ENABLE_VIBRATE:
-      printf("Enable vibration.\n");
+      //printf("Enable vibration.\n");
       set_ack(0x80);
       break;
 
     case SW_CMD_SET_PLAYER:
-      printf("Set player: ");
+      //printf("Set player: ");
       set_ack(0x80);
 
       uint8_t player = data[11] & 0xF;
@@ -290,42 +301,42 @@ void command_handler(uint8_t command, const uint8_t *data, uint16_t len)
       {
           default:
           case 1:
-              printf("1\n");
+              //printf("1\n");
               break;
 
           case 3:
-              printf("2\n");
+              //printf("2\n");
               break;
 
           case 7:
-              printf("3\n");
+              //printf("3\n");
               break;
 
           case 15:
-              printf("4\n");
+              //printf("4\n");
               break;
       }
       break;
 
     default:
-      printf("Unhandled: %X\n", command);
+      //printf("Unhandled: %X\n", command);
       for(uint16_t i = 0; i < len; i++)
       {
-        printf("%X, ", data[i]);
+        //printf("%X, ", data[i]);
       }
-      printf("\n");
+      //printf("\n");
       set_ack(0x80);
       break;
   }
 
-  printf("Sent: ");
+  //printf("Sent: ");
   for(uint8_t i = 0; i < 32; i++)
   {
-    printf("%X, ", _switch_command_buffer[i]);
+    //printf("%X, ", _switch_command_buffer[i]);
   }
-  printf("\n");
-
-  tud_hid_report(0x21, _switch_command_buffer, 64);
+  //printf("\n");
+  
+  bool sent = tud_hid_report(0x21, _switch_command_buffer, SW_REPORT_SIZE);
 }
 
 // Handles an OUT report and responds accordingly.
@@ -336,6 +347,7 @@ void report_handler(uint8_t report_id, const uint8_t *data, uint16_t len)
     // We have command data and possibly rumble
     case SW_OUT_ID_RUMBLE_CMD:
       rumble_translate(&data[2]);
+
       command_handler(data[10], data, len);
       break;
 
@@ -348,7 +360,7 @@ void report_handler(uint8_t report_id, const uint8_t *data, uint16_t len)
       break;
 
     default:
-      printf("Unknown report: %X\n", report_id);
+      //printf("Unknown report: %X\n", report_id);
       break;
   }
 }
@@ -401,9 +413,10 @@ void switch_commands_process(sw_input_s *input_data)
       _switch_command_buffer[10]  = (input_data->rs_y & 0xFF0) >> 4;
       _switch_command_buffer[11]  = _unknown_thing();
 
-      //printf("V: %d, %d\n", _switch_command_buffer[46], _switch_command_buffer[47]);
+      ////printf("V: %d, %d\n", _switch_command_buffer[46], _switch_command_buffer[47]);
 
-      tud_hid_report(_switch_command_report_id, _switch_command_buffer, 64);
+      
+      bool sent = tud_hid_report(0x30, _switch_command_buffer, SW_REPORT_SIZE);
     }
   }
 }

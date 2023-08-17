@@ -404,8 +404,8 @@ void adapter_mode_task(void *param)
             cmd_phase = CMD_PHASE_PROBE;
             memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
 
-            vTaskDelay(300/portTICK_PERIOD_MS);
-            usb_send_data();
+            //vTaskDelay(300/portTICK_PERIOD_MS);
+            //usb_send_data();
         }
 
         if (cmd_phase == CMD_PHASE_PROBE)

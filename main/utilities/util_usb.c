@@ -1,14 +1,15 @@
 #include "util_usb.h"
 
-const char* global_string_descriptor[] = {
+TaskHandle_t usb_device_taskdef;
+
+const char *global_string_descriptor[] = {
     // array of pointer to string descriptors
-    (char[]){0x09, 0x04},                // 0: is supported language is English (0x0409)
-    ADAPTER_MANUFACTURER,              // 1: Manufacturer
-    ADATPER_PRODUCTNAME,        // 2: Product
-    "000000",           // 3: Serials, should use chip ID
+    (char[]){0x09, 0x04}, // 0: is supported language is English (0x0409)
+    ADAPTER_MANUFACTURER, // 1: Manufacturer
+    ADATPER_PRODUCTNAME,  // 2: Product
+    "000000",             // 3: Serials, should use chip ID
 };
 
-usb_mode_t adapter_mode = USB_MODE_NS;
 uint16_t usb_timeout_time = 0;
 
 // Used to switch back and forth for 'performance mode'
@@ -34,15 +35,15 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const *report, uint16_
     {
     default:
     case USB_MODE_NS:
-        if ((report[0] == 0x30))
+        if ((report[0] == 0x21) || (report[0] == 0x30) || (report[0] == 0x3F))
         {
-            usb_process_data();
+            // usb_process_data();
         }
         break;
     case USB_MODE_XINPUT:
         if ((report[0] == 0x00) && (report[1] == XID_REPORT_LEN))
         {
-            usb_process_data();
+            // usb_process_data();
         }
 
         break;
@@ -50,7 +51,7 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const *report, uint16_
     case USB_MODE_GC:
         if (report[0] == 0x21)
         {
-            usb_process_data();
+            // usb_process_data();
         }
         break;
     }
@@ -60,14 +61,22 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const *report, uint16_
 // received data on OUT endpoint ( Report ID = 0, Type = 0 )
 void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer, uint16_t bufsize)
 {
-
     switch (active_usb_mode)
     {
     default:
-
-        break;
     case USB_MODE_NS:
-
+        if (!report_id && !report_type)
+        {
+            if (buffer[0] == SW_OUT_ID_RUMBLE)
+            {
+                rx_vibrate = true;
+                rumble_translate(&buffer[2]);
+            }
+            else
+            {
+                switch_commands_future_handle(buffer[0], buffer, bufsize);
+            }
+        }
         break;
 
     case USB_MODE_GC:
@@ -75,7 +84,7 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_
         {
             if (buffer[0] == 0x11)
             {
-                gamecube_rumble_en((buffer[1] > 0) ? true : false);
+                rx_vibrate = (buffer[1] > 0) ? true : false;
             }
             else if (buffer[0] == 0x13)
             {
@@ -109,13 +118,13 @@ uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance)
     (void)instance;
     switch (active_usb_mode)
     {
-        default:
-        case USB_MODE_NS:
-            return swpro_hid_report_descriptor;
-            break;
-        case USB_MODE_GC:
-            return gc_hid_report_descriptor;
-            break;
+    default:
+    case USB_MODE_NS:
+        return swpro_hid_report_descriptor;
+        break;
+    case USB_MODE_GC:
+        return gc_hid_report_descriptor;
+        break;
     }
     return NULL;
 }
@@ -127,8 +136,6 @@ usbd_class_driver_t const *usbd_app_driver_get_cb(uint8_t *driver_count)
     *driver_count += 1;
     return &tud_xinput_driver;
 }
-
-
 
 const tusb_desc_webusb_url_t desc_url =
     {
@@ -165,7 +172,7 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
             {
                 // Get Microsoft OS 2.0 compatible descriptor
                 uint16_t total_len;
-                if(active_usb_mode==USB_MODE_NS)
+                if (active_usb_mode == USB_MODE_NS)
                 {
                     memcpy(&total_len, desc_ms_os_20 + 8, 2);
                     return tud_control_xfer(rhport, request, (void *)(uintptr_t)desc_ms_os_20, total_len);
@@ -360,28 +367,28 @@ void gcusb_start(usb_mode_t mode)
 
     switch (mode)
     {
-        default:
-        case USB_MODE_NS:
-            ESP_LOGI(TAG, "NS MODE");
-            ESP_ERROR_CHECK(tinyusb_driver_install(&swpro_cfg));
-            break;
+    default:
+    case USB_MODE_NS:
+        ESP_LOGI(TAG, "NS MODE");
+        ESP_ERROR_CHECK(tinyusb_driver_install(&swpro_cfg));
+        break;
 
-        case USB_MODE_GC:
-            ESP_LOGI(TAG, "GCC MODE");
-            if (adapter_settings.performance_mode)
-            {
-                ESP_ERROR_CHECK(tinyusb_driver_install(&gc_cfg_perf));
-            }
-            else
-            {
-                ESP_ERROR_CHECK(tinyusb_driver_install(&gc_cfg));
-            }
-            break;
+    case USB_MODE_GC:
+        ESP_LOGI(TAG, "GCC MODE");
+        if (adapter_settings.performance_mode)
+        {
+            ESP_ERROR_CHECK(tinyusb_driver_install(&gc_cfg_perf));
+        }
+        else
+        {
+            ESP_ERROR_CHECK(tinyusb_driver_install(&gc_cfg));
+        }
+        break;
 
-        case USB_MODE_XINPUT:
-            ESP_LOGI(TAG, "LEGACY XINPUT MODE");
-            ESP_ERROR_CHECK(xinput_driver_install());
-            break;
+    case USB_MODE_XINPUT:
+        ESP_LOGI(TAG, "LEGACY XINPUT MODE");
+        ESP_ERROR_CHECK(xinput_driver_install());
+        break;
     }
 
     while (!tud_mounted())
@@ -403,33 +410,53 @@ void gcusb_start(usb_mode_t mode)
         }
     }
     vTaskDelay(250 / portTICK_PERIOD_MS);
-    usb_send_data();
+    // usb_send_data();
+
+    // DEBUG
+    for(;;)
+    {
+        usb_process_task();
+    }
 }
 
 void usb_send_data(void)
 {
-    if (!tud_ready())
+    if(!tud_hid_ready()) 
     {
+        vTaskDelay(4/portTICK_PERIOD_MS);
         return;
     }
     // Send USB data according to the adapter mode
     switch (active_usb_mode)
     {
-        default:
-        case USB_MODE_NS:
-            swpro_hid_report(&gc_poll_response, &gc_origin_data);
-            break;
-        case USB_MODE_GC:
-            gamecube_hid_report(&gc_poll_response, &gc_origin_data);
-            break;
-        case USB_MODE_XINPUT:
-            xinput_report(&gc_poll_response, &gc_origin_data);
-            break;
+    default:
+    case USB_MODE_NS:
+        swpro_hid_report(&gc_poll_response, &gc_origin_data);
+        break;
+    case USB_MODE_GC:
+        gamecube_hid_report(&gc_poll_response, &gc_origin_data);
+        break;
+    case USB_MODE_XINPUT:
+        xinput_report(&gc_poll_response, &gc_origin_data);
+        break;
     }
 }
 
 void rmt_reset()
 {
+    if (cmd_phase == CMD_PHASE_POLL)
+    {
+        
+        if (active_gc_type == GC_TYPE_WAVEBIRD)
+        {
+            JB_TX_MEM[GC_POLL_VIBRATE_IDX] = JB_LOW;
+        }
+        else
+        {
+            JB_TX_MEM[GC_POLL_VIBRATE_IDX] = JB_HIGH;//(rx_vibrate == true) ? JB_HIGH : JB_LOW;
+        }
+    }
+
     JB_RX_MEMOWNER = 1;
     JB_RX_RDRST = 1;
     JB_RX_RDRST = 0;
@@ -455,29 +482,55 @@ void rmt_begin()
 }
 
 // This is called after each successful USB report send.
-void usb_process_data(void)
+void usb_process_task()
 {
     usb_timeout_time = 0;
 
-    if (cmd_phase == CMD_PHASE_POLL)
+    if (switch_get_reporting_mode() == 0x30)
     {
-        if (active_gc_type == GC_TYPE_WIRED)
-        {
-            JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (rx_vibrate == true) ? JB_HIGH : JB_LOW;
-        }
-        else if (active_gc_type == GC_TYPE_WAVEBIRD)
-        {
-            JB_TX_MEM[GC_POLL_VIBRATE_IDX] = JB_LOW;
-        }
-    }
+        
 
-    // Handle performance mode being disabled
-    if ((active_usb_mode == USB_MODE_GC) && (!adapter_settings.performance_mode))
-    {
-        // Poll 7 times every time
-        for (uint8_t i = 0; i < 7; i++)
+        // Handle performance mode being disabled
+        if (((active_usb_mode == USB_MODE_GC) && (!adapter_settings.performance_mode)) || (active_usb_mode == USB_MODE_NS))
         {
-            ets_delay_us(NON_P_MODE_DELAY);
+            // Poll 7 times every time
+            for (uint8_t i = 0; i < 7; i++)
+            {
+                ets_delay_us(NON_P_MODE_DELAY);
+                rmt_begin();
+                ets_delay_us(TIMEOUT_GC_US);
+
+                // If we timed out, just reset for next phase
+                if (!rx_recieved)
+                {
+
+                    rmt_reset();
+
+                    rx_timeout_counts += 1;
+                    if (rx_timeout_counts >= TIMEOUT_COUNTS)
+                    {
+                        rx_timeout_counts = 0;
+                        cmd_phase = CMD_PHASE_PROBE;
+                        rgb_animate_to(COLOR_RED);
+
+                        memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
+                    }
+                }
+                else if (rx_recieved)
+                {
+                    rx_recieved = false;
+                    rx_timeout_counts = 0;
+                    // Process our data if we received something
+                    // from the gamecube controller
+                    gamecube_rmt_process();
+                    rmt_reset();
+                }
+            }
+        }
+        // Default handling (Poll 1 time for 1ms interval)
+        else
+        {
+            ets_delay_us(250);
             rmt_begin();
             ets_delay_us(TIMEOUT_GC_US);
 
@@ -506,39 +559,6 @@ void usb_process_data(void)
                 gamecube_rmt_process();
                 rmt_reset();
             }
-        }
-    }
-    // Default handling (Poll 1 time for 1ms interval)
-    else
-    {
-        ets_delay_us(250);
-        rmt_begin();
-        ets_delay_us(TIMEOUT_GC_US);
-
-        // If we timed out, just reset for next phase
-        if (!rx_recieved)
-        {
-
-            rmt_reset();
-
-            rx_timeout_counts += 1;
-            if (rx_timeout_counts >= TIMEOUT_COUNTS)
-            {
-                rx_timeout_counts = 0;
-                cmd_phase = CMD_PHASE_PROBE;
-                rgb_animate_to(COLOR_RED);
-
-                memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
-            }
-        }
-        else if (rx_recieved)
-        {
-            rx_recieved = false;
-            rx_timeout_counts = 0;
-            // Process our data if we received something
-            // from the gamecube controller
-            gamecube_rmt_process();
-            rmt_reset();
         }
     }
 
