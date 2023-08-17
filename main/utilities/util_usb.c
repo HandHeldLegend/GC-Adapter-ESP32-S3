@@ -69,7 +69,6 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_
         {
             if (buffer[0] == SW_OUT_ID_RUMBLE)
             {
-                rx_vibrate = true;
                 rumble_translate(&buffer[2]);
             }
             else
@@ -99,11 +98,11 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_
             {
                 if ((buffer[3] > 0) || (buffer[4] > 0))
                 {
-                    gamecube_rumble_en(true);
+                    rx_vibrate = true;
                 }
                 else
                 {
-                    gamecube_rumble_en(false);
+                    rx_vibrate = false;
                 }
             }
         }
@@ -441,18 +440,18 @@ void rmt_reset()
 {
     if (cmd_phase == CMD_PHASE_POLL)
     {
-        
-        if (active_gc_type == GC_TYPE_WAVEBIRD)
+        if (active_gc_type == GC_TYPE_WIRED)
+        {
+            JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (rx_vibrate == true) ? JB_HIGH : JB_LOW;
+        }
+        else if (active_gc_type == GC_TYPE_WAVEBIRD)
         {
             JB_TX_MEM[GC_POLL_VIBRATE_IDX] = JB_LOW;
-        }
-        else
-        {
-            JB_TX_MEM[GC_POLL_VIBRATE_IDX] = JB_HIGH;//(rx_vibrate == true) ? JB_HIGH : JB_LOW;
         }
     }
 
     JB_RX_MEMOWNER = 1;
+
     JB_RX_RDRST = 1;
     JB_RX_RDRST = 0;
     JB_RX_CLEARISR = 1;
@@ -462,6 +461,7 @@ void rmt_reset()
     JB_RX_BEGIN = 1;
     JB_TX_RDRST = 1;
     JB_TX_WRRST = 1;
+
     JB_TX_CLEARISR = 1;
 }
 
@@ -534,7 +534,6 @@ void usb_process_task()
             {
 
                 rmt_reset();
-
                 rx_timeout_counts += 1;
                 if (rx_timeout_counts >= TIMEOUT_COUNTS)
                 {
