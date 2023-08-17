@@ -226,8 +226,10 @@ void swpro_hid_report(gc_poll_response_s *poll_response, gc_origin_data_s *origi
 
     // data.b_minus  = poll_response->button_minus;
     data.b_plus = poll_response->button_start;
-    // data.b_home   = poll_response->button_home;
-    // data.b_capture = poll_response->button_capture;
+
+    uint32_t regread = REG_READ(GPIO_IN_REG) & PIN_MASK_GCP;
+    data.b_home     = !util_getbit(regread, NEXT_BUTTON);
+    data.b_capture  = !util_getbit(regread, PREV_BUTTON);
 
     // data.sb_right = poll_response->button_stick_right;
     // data.sb_left  = poll_response->button_stick_left;

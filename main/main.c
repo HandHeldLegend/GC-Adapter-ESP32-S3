@@ -54,7 +54,7 @@ void app_main(void)
     {
         active_usb_mode = adapter_settings.adapter_mode;
         // Start task which will help with mode switching
-        //xTaskCreatePinnedToCore(adapter_mode_task, "mode_task", 4000, NULL, 4, &mode_task_handle, 1);
+        xTaskCreatePinnedToCore(adapter_mode_task, "mode_task", 4000, NULL, 4, &mode_task_handle, 1);
     }
 
     neopixel_init(colors, SPI3_HOST);
@@ -62,9 +62,6 @@ void app_main(void)
     rgb_animator_init();
 
     cmd_phase = CMD_PHASE_PROBE;
-
-    // DEBUG
-    active_usb_mode=0;
     
     
     switch(active_usb_mode)

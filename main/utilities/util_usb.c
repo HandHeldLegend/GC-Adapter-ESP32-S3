@@ -1,7 +1,5 @@
 #include "util_usb.h"
 
-TaskHandle_t usb_device_taskdef;
-
 const char *global_string_descriptor[] = {
     // array of pointer to string descriptors
     (char[]){0x09, 0x04}, // 0: is supported language is English (0x0409)
@@ -31,6 +29,8 @@ uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_t
 
 void tud_hid_report_complete_cb(uint8_t instance, uint8_t const *report, uint16_t len)
 {
+    usb_timeout_time = 0;
+
     switch (active_usb_mode)
     {
     default:
@@ -421,11 +421,6 @@ void gcusb_start(usb_mode_t mode)
 
 void usb_send_data(void)
 {
-    if(!tud_hid_ready()) 
-    {
-        vTaskDelay(4/portTICK_PERIOD_MS);
-        return;
-    }
     // Send USB data according to the adapter mode
     switch (active_usb_mode)
     {
@@ -484,10 +479,9 @@ void rmt_begin()
 // This is called after each successful USB report send.
 void usb_process_task()
 {
-    usb_timeout_time = 0;
 
-    if (switch_get_reporting_mode() == 0x30)
-    {
+    //if (switch_get_reporting_mode() == 0x30)
+    //{
         
 
         // Handle performance mode being disabled
@@ -511,6 +505,7 @@ void usb_process_task()
                     {
                         rx_timeout_counts = 0;
                         cmd_phase = CMD_PHASE_PROBE;
+                        
                         rgb_animate_to(COLOR_RED);
 
                         memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
@@ -545,6 +540,7 @@ void usb_process_task()
                 {
                     rx_timeout_counts = 0;
                     cmd_phase = CMD_PHASE_PROBE;
+
                     rgb_animate_to(COLOR_RED);
 
                     memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
@@ -560,7 +556,7 @@ void usb_process_task()
                 rmt_reset();
             }
         }
-    }
+    //}
 
     // Send at the end
     usb_send_data();

@@ -403,9 +403,6 @@ void adapter_mode_task(void *param)
             rmt_reset();
             cmd_phase = CMD_PHASE_PROBE;
             memcpy(JB_TX_MEM, gcmd_probe_rmt, sizeof(rmt_item32_t) * GCMD_PROBE_LEN);
-
-            //vTaskDelay(300/portTICK_PERIOD_MS);
-            //usb_send_data();
         }
 
         if (cmd_phase == CMD_PHASE_PROBE)
@@ -426,7 +423,7 @@ void adapter_mode_task(void *param)
                     rgb_animate_blink(COLOR_PINK);
                 }
                 vTaskDelay(500/portTICK_PERIOD_MS);
-                rgb_animate_to(COLOR_BLACK);
+                rgb_shutdown();
                 vTaskDelay(500/portTICK_PERIOD_MS);
                 save_adapter_settings();
                 esp_restart();
@@ -441,7 +438,7 @@ void adapter_mode_task(void *param)
                 {
                     adapter_settings.adapter_mode = 0x00;
                 }
-                rgb_animate_to(COLOR_BLACK);
+                rgb_shutdown();
                 vTaskDelay(500/portTICK_PERIOD_MS);
                 save_adapter_settings();
                 esp_restart();

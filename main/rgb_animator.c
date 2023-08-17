@@ -8,6 +8,7 @@ rgb_s next_color = {0};
 
 rgb_msg_s rgb_msg_fade = {0};
 rgb_msg_s rgb_msg_blink = {0};
+bool _rgb_shutdown = false;
 
 TaskHandle_t    rgb_animator_TaskHandle = NULL;
 QueueHandle_t   rgb_animator_Queue;
@@ -18,6 +19,33 @@ void rgb_animate_internal_fade(rgb_s color)
 {
     uint8_t fader = 0;
     next_color.rgb = color.rgb;
+    
+    while(fader < 30)
+    {
+        uint8_t t = 0;
+        if ((8 * fader) > 255)
+        {
+            t = 255;
+        }
+        else
+        {
+            t = (8 * fader);
+        }
+        rgb_blend(&current_color, last_color, next_color, t);
+        rgb_setall(current_color);
+        rgb_show();
+        fader += 1;
+        vTaskDelay(10/portTICK_PERIOD_MS);
+    }
+    last_color.rgb = next_color.rgb;
+    rgb_setall(next_color);
+    rgb_show();
+}
+
+void rgb_animate_internal_shutdown()
+{
+    uint8_t fader = 0;
+    next_color.rgb = COLOR_BLACK.rgb;
     
     while(fader < 30)
     {
@@ -107,18 +135,30 @@ void rgb_animator_task(void * param)
     rgb_msg_s anim_msg = {0};
 
     for(;;)
-    {
+    {   
         if (xQueueReceive(rgb_animator_Queue, &(anim_msg), (TickType_t) 0))
         {
             switch(anim_msg.msg)
             {
                 default:
+                case RGB_MSG_SHUTDOWN:
+                    rgb_animate_internal_shutdown();
+                    break;
+
                 case RGB_MSG_FADE:
-                    rgb_animate_internal_fade(anim_msg.color);
+                    if(!_rgb_shutdown)
+                    {
+                        rgb_animate_internal_fade(anim_msg.color);
+                    }   
+                    
                     break;
                 
                 case RGB_MSG_BLINK:
-                    rgb_animate_internal_blink(anim_msg.color);
+                    if(!_rgb_shutdown)
+                    {
+                        rgb_animate_internal_blink(anim_msg.color);
+                    }   
+                    
                     break;
             }
             
@@ -127,8 +167,17 @@ void rgb_animator_task(void * param)
     }
 }
 
+void rgb_shutdown()
+{
+    _rgb_shutdown = true;
+    rgb_msg_fade.msg = RGB_MSG_SHUTDOWN;
+    xQueueSend(rgb_animator_Queue, &rgb_msg_fade, (TickType_t) 0);
+}
+
 void rgb_animate_to(rgb_s color)
 {
+    if(_rgb_shutdown) return;
+
     if (color.rgb == rgb_msg_fade.color.rgb)
     {
         return;
@@ -142,6 +191,8 @@ void rgb_animate_to(rgb_s color)
 
 void rgb_animate_blink(rgb_s color)
 {
+    if(_rgb_shutdown) return;
+
     rgb_blinking = true;
 
     rgb_msg_blink.color.rgb = color.rgb;

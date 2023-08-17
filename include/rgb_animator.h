@@ -7,6 +7,7 @@ typedef enum
 {
     RGB_MSG_FADE = 0,
     RGB_MSG_BLINK,
+    RGB_MSG_SHUTDOWN,
 } rgb_msg_t;
 
 typedef struct
@@ -17,6 +18,7 @@ typedef struct
 
 extern rgb_s mode_color;
 
+void rgb_shutdown();
 void rgb_animate_to(rgb_s color);
 void rgb_animate_blink(rgb_s color);
 void rgb_animator_init();
