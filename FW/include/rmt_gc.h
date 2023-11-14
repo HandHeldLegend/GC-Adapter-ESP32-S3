@@ -14,9 +14,6 @@ typedef struct {
 extern legacy_rmt_mem_t RMTMEM;
 
 #define JB_P1_GPIO      GPIO_NUM_5
-#define JB_P2_GPIO      GPIO_NUM_6
-#define JB_P3_GPIO      GPIO_NUM_7
-#define JB_P4_GPIO      GPIO_NUM_8
 
 #define RMT_TX_CHANNEL          RMT_CHANNEL_0
 #define RMT_RX_CHANNEL          RMT_CHANNEL_4
