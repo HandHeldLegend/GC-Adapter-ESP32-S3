@@ -1,0 +1,15 @@
+{
+  "name": "GC Pocket Adapter",
+  "version": "11.5.2023",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-S3",
+      "parts": [
+        { "path": "https:\/\/raw.githubusercontent.com\/HandHeldLegend\/GC-Adapter-ESP32-S3\/main\/build\/bootloader\/bootloader.bin", "offset": 4096 },
+        { "path": "https:\/\/raw.githubusercontent.com\/HandHeldLegend\/GC-Adapter-ESP32-S3\/main\/build\/partition_table\/partition-table.bin", "offset": 32768 },
+        { "path": "https:\/\/raw.githubusercontent.com\/HandHeldLegend\/GC-Adapter-ESP32-S3\/main\/build\/gc-pocket-adapter.bin", "offset": 65536 }
+      ]
+    }
+  ]
+}
