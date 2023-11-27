@@ -384,9 +384,6 @@ void _joybus_rmt_process(void)
 
                 memcpy(JB_TX_MEM, gcmd_poll_rmt, sizeof(rmt_item32_t) * GCMD_POLL_LEN);
 
-                rgb_set_all(COLOR_WHITE.color);
-                rgb_set_dirty();
-
                 _port_phase = 2;
                 _port_joybus[0].port_itf = 0;
             }
@@ -546,12 +543,31 @@ void _joybus_rmt_process(void)
     }
 }
 
+void _joybus_timeout_counter(bool reset)
+{
+    static uint8_t count = 0;
+
+    if(reset) count = 0;
+
+    count++;
+
+    if(count>=25)
+    {
+        _port_joybus[0].port_itf = -1;
+        _port_phase = 0;
+        joybus_itf_init();
+        count = 0;
+    }
+}
+
 void joybus_itf_poll(joybus_input_s **out)
 {
     *out = _port_joybus;
     
     _rmt_begin();
     ets_delay_us(500);
+    
+    _joybus_timeout_counter(rx_recieved);
     if (rx_recieved)
     {
         rx_recieved = false;

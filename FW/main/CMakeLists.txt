@@ -39,3 +39,12 @@ idf_component_register(
     "../common/include/usb"
     "../common/include/utilities"
     )
+
+# Set the post-build script
+set(POST_BUILD_COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/manifest.py)
+add_custom_target(post_build
+                  COMMAND ${POST_BUILD_COMMAND}
+                  COMMENT "Running post-build script")
+
+# Add the post-build target as a dependency for the main project
+add_dependencies(app post_build)
