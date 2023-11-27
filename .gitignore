@@ -1,4 +1,4 @@
-build/
-managed_components/*
+FW/build/
+FW/managed_components/*
 
 .vscode/
