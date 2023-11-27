@@ -10,3 +10,14 @@ project(gc-pocket-adapter)
 
 idf_component_get_property(tusb_lib espressif__tinyusb COMPONENT_LIB)
 target_include_directories(${tusb_lib} PRIVATE "common/include/usb")
+
+add_custom_command(TARGET ${PROJECT_NAME}
+ 					POST_BUILD
+					COMMAND ${CMAKE_COMMAND} 
+					-DTARGET_NAME=${PROJECT_NAME}
+					-DTARGET_PATH=${CMAKE_CURRENT_SOURCE_DIR}
+					-P ${CMAKE_SOURCE_DIR}/manifest.cmake
+					COMMENT "Updating version in manifest.json"
+					WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+					)
+                    
