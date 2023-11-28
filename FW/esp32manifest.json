@@ -6,9 +6,9 @@
     {
       "chipFamily": "ESP32-S3",
       "parts": [
-        { "path": "https:\/\/raw.githubusercontent.com\/HandHeldLegend\/GC-Adapter-ESP32-S3\/main\/build\/bootloader\/bootloader.bin", "offset": 4096 },
-        { "path": "https:\/\/raw.githubusercontent.com\/HandHeldLegend\/GC-Adapter-ESP32-S3\/main\/build\/partition_table\/partition-table.bin", "offset": 32768 },
-        { "path": "https:\/\/raw.githubusercontent.com\/HandHeldLegend\/GC-Adapter-ESP32-S3\/main\/build\/gc-pocket-adapter.bin", "offset": 65536 }
+        { "path": "https:\/\/raw.githubusercontent.com\/HandHeldLegend\/GC-Adapter-ESP32-S3\/main\/FW\/build\/bootloader\/bootloader.bin", "offset": 4096 },
+        { "path": "https:\/\/raw.githubusercontent.com\/HandHeldLegend\/GC-Adapter-ESP32-S3\/main\/FW\/build\/partition_table\/partition-table.bin", "offset": 32768 },
+        { "path": "https:\/\/raw.githubusercontent.com\/HandHeldLegend\/GC-Adapter-ESP32-S3\/main\/FW\/build\/gc-pocket-adapter.bin", "offset": 65536 }
       ]
     }
   ]
