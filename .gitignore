@@ -1,4 +1,7 @@
 FW/build/
+!FW/build/bootloader/bootloader.bin
+!FW/build/partition_table/partition-table.bin 
+!FW/build/gc-pocket-adapter.bin
 FW/managed_components/*
 
 .vscode/

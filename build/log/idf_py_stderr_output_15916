@@ -1,3 +1,0 @@
-warning: the value 'y' is invalid for SOC_PCNT_GROUPS (defined at C:/Users/Mitch/esp/esp-idf\./components/soc/esp32s3/include/soc/Kconfig.soc_caps.in:558), which has type int -- assignment ignored
-Compiler supported targets: xtensa-esp32s3-elf
-
