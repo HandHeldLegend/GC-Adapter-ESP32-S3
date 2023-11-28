@@ -165,7 +165,10 @@ void _rmt_begin()
 
 void joybus_itf_enable_rumble(uint8_t interface, bool enable)
 {
-    _port_rumble = enable && (!interface);
+    if(!interface)
+    {
+        _port_rumble = enable;
+    }
 }
 
 static void _joybus_rmt_isr(void *arg)
