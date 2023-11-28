@@ -121,20 +121,20 @@ volatile uint32_t rx_offset = 0;
 
 float analog_scaler_f = 1.28f;
 
+// 0x09 - wired || 0xE9 - wavebird
 void _rmt_reset()
 {
     if (_port_phase == 2)
     {
-        /*
-        if (active_gc_type == GC_TYPE_WIRED)
+        
+        if (_active_gc_type == 0x09)
         {
-            JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (rx_vibrate == true) ? JB_HIGH : JB_LOW;
+            JB_TX_MEM[GC_POLL_VIBRATE_IDX] = (_port_rumble == true) ? JB_HIGH : JB_LOW;
         }
-        else if (active_gc_type == GC_TYPE_WAVEBIRD)
+        else if (_active_gc_type == 0xE9)
         {
             JB_TX_MEM[GC_POLL_VIBRATE_IDX] = JB_LOW;
         }
-        */
     }
 
     JB_RX_MEMOWNER = 1;
